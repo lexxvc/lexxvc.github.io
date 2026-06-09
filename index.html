@@ -28,7 +28,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:var(--bg
 .api-indicator.ok{background:rgba(15,110,86,0.25);color:#5DCAA5;border-color:rgba(15,110,86,0.3)}
 .api-indicator.missing{background:rgba(226,75,74,0.2);color:#F09595;border-color:rgba(226,75,74,0.3)}
 
-.main{max-width:780px;margin:0 auto;padding:24px 20px 40px}
+.main{max-width:1200px;margin:0 auto;padding:24px 20px 40px}
 
 .card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:18px 22px;margin-bottom:14px}
 .card-title{font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:14px;display:flex;align-items:center;gap:7px}
@@ -73,7 +73,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:var(--bg
 .act-table th{font-size:10px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:0.5px;padding:0 6px 8px;text-align:left;border-bottom:0.5px solid var(--border);white-space:nowrap}
 .act-table td{padding:5px 6px;border-bottom:0.5px solid var(--border);vertical-align:middle}
 .act-table tr:last-child td{border-bottom:none}
-.act-table td input{width:100%;border:none;background:transparent;font-size:12px;color:var(--txt);padding:2px 4px;border-radius:3px;font-family:inherit}
+.act-table td input{width:100%;border:none;background:transparent;font-size:11px;color:var(--txt);padding:2px 3px;border-radius:3px;font-family:inherit}
 .act-table td input:focus{outline:none;background:#F0EFF9;border:0.5px solid var(--blue-lt)}
 .cat-dot{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:3px;vertical-align:middle}
 select.cat-sel{border:none;background:transparent;font-size:11px;color:var(--txt2);cursor:pointer;padding:2px;border-radius:3px;font-family:inherit}
@@ -104,7 +104,7 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
 
 /* Gantt mini preview */
 .gantt-wrap{overflow-x:auto;margin-top:10px;border:0.5px solid var(--border);border-radius:var(--radius-sm)}
-.gantt-preview-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:14px}
+.gantt-preview-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px}
 .gantt-preview-card .card-title{font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:12px;display:flex;align-items:center;gap:7px}
 .gantt-svg-wrap{overflow-x:auto;border:0.5px solid var(--border);border-radius:var(--radius-sm);background:#fff}
 .gantt-svg-wrap svg{display:block;min-width:500px}
@@ -121,11 +121,12 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
     <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-...">
     <div class="modal-note">
       Obtén tu key en <strong>console.anthropic.com</strong> → API Keys → Create Key.<br>
-      La clave se guarda en localStorage de tu navegador y nunca se envía a ningún servidor excepto directamente a Anthropic.
+      La clave se guarda en localStorage de tu navegador y nunca se envía a ningún servidor excepto directamente a Anthropic.<br><br>
+      <strong>Sin API key</strong> puedes usar el <em>modo manual</em> para crear timings ingresando los datos a mano.
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn-primary" onclick="saveApiKey()" style="flex:1">Guardar y continuar</button>
-      <button class="btn-secondary" onclick="closeModal()" id="cancelApiBtn" style="display:none">Cancelar</button>
+      <button class="btn-secondary" onclick="closeModal()" id="cancelApiBtn">Cancelar</button>
     </div>
   </div>
 </div>
@@ -147,9 +148,12 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
   <!-- STEP 1: Upload -->
   <div id="step1">
     <div class="card">
-      <div class="card-title">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        Cotización PDF
+      <div class="card-title" style="justify-content:space-between">
+        <span style="display:flex;align-items:center;gap:7px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          PDF de cotización o timing existente
+        </span>
+        <span style="font-size:11px;color:var(--txt3);font-weight:400;text-transform:none;letter-spacing:0">Acepta cotizaciones y timings previos</span>
       </div>
       <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -157,6 +161,10 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
         <small>o haz clic para seleccionar · Solo archivos .pdf</small>
       </div>
       <input type="file" id="fileInput" accept=".pdf" style="display:none">
+      <div id="aiNote" style="display:none;margin-top:10px;padding:9px 12px;background:#FFF8E6;border:0.5px solid #F0C040;border-radius:6px;font-size:12px;color:#7A5800;align-items:center;gap:8px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>Sin API key no puedes analizar PDFs con IA. Usa <strong>Crear timing manual</strong> o <span style="color:var(--blue);cursor:pointer;text-decoration:underline" onclick="openApiModal()">configura tu API key</span> para activar el análisis automático.</span>
+      </div>
       <div id="fileInfo" style="display:none;margin-top:10px;font-size:12px;color:var(--teal);display:flex;align-items:center;gap:6px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         <span id="fileName"></span>
@@ -174,8 +182,8 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
           <input type="date" id="startDate" value="">
         </div>
         <div class="meta-field">
-          <label>Semanas de ejecución (referencia)</label>
-          <input type="number" id="totalWeeks" value="12" min="4" max="52" oninput="renderGanttPreview()">
+          <label>Semanas de ejecución — <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="recalcAll()" title="Recalcula todas las actividades desde cero">↺ Recalcular todo</span></label>
+          <input type="number" id="totalWeeks" value="12" min="4" max="52" oninput="recalcAll()">
         </div>
       </div>
     </div>
@@ -184,6 +192,63 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
       <button class="btn-primary" id="analyzeBtn" onclick="analyzeQuote()" disabled>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         Analizar cotización con IA
+      </button>
+      <button class="btn-secondary" onclick="openManualMode()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Crear timing manual
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 1b: Manual project form -->
+  <div id="step1b" style="display:none">
+    <div class="card">
+      <div class="card-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Datos del proyecto
+      </div>
+      <div class="meta-grid">
+        <div class="meta-field" style="grid-column:1/-1">
+          <label>Nombre del proyecto *</label>
+          <input type="text" id="m_title" placeholder="Ej: Línea ensamble Spoiler VW 380 - Estación 1">
+        </div>
+        <div class="meta-field" style="grid-column:1/-1">
+          <label>Descripción / subtítulo</label>
+          <input type="text" id="m_subtitle" placeholder="Ej: Estación EOL Multi-variante">
+        </div>
+        <div class="meta-field">
+          <label>Cliente *</label>
+          <input type="text" id="m_client" placeholder="Ej: MOTHERSON">
+        </div>
+        <div class="meta-field">
+          <label>Contacto</label>
+          <input type="text" id="m_contact" placeholder="Ej: Arely Gómez">
+        </div>
+        <div class="meta-field">
+          <label>Número de cotización</label>
+          <input type="text" id="m_quote" placeholder="Ej: ADV-SMP-214-B-2026">
+        </div>
+        <div class="meta-field">
+          <label>Fecha</label>
+          <input type="text" id="m_date" placeholder="Ej: 16/04/2026">
+        </div>
+        <div class="meta-field">
+          <label>Semanas de ejecución *</label>
+          <input type="number" id="m_weeks" value="12" min="4" max="52">
+        </div>
+        <div class="meta-field">
+          <label>Fecha de inicio</label>
+          <input type="date" id="m_startdate">
+        </div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="startManual()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Generar timing
+      </button>
+      <button class="btn-secondary" onclick="document.getElementById('step1b').style.display='none';document.getElementById('step1').style.display='block'">
+        ← Volver
       </button>
     </div>
   </div>
@@ -205,40 +270,56 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
       </div>
     </div>
 
-    <div class="card" id="actCard" style="display:none">
-      <div class="card-title" style="justify-content:space-between">
-        <span style="display:flex;align-items:center;gap:7px">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-          Actividades detectadas
-        </span>
-        <span id="actCount" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--txt3)"></span>
-      </div>
-      <div style="overflow-x:auto">
-        <table class="act-table">
-          <thead>
-            <tr>
-              <th style="width:22px">#</th>
-              <th>Actividad</th>
-              <th style="width:52px">Día inicio</th>
-              <th style="width:52px">Duración</th>
-              <th style="width:56px">Pred.</th>
-              <th style="width:130px">Categoría</th>
-              <th style="width:24px"></th>
-            </tr>
-          </thead>
-          <tbody id="actBody"></tbody>
-        </table>
-      </div>
-      <button class="add-row-btn" onclick="addRow()">+ Agregar actividad</button>
-    </div>
+    <!-- SPLIT LAYOUT: tabla izquierda | gantt derecha -->
+    <div id="splitPanel" style="display:none">
+      <div style="display:grid;grid-template-columns:340px 1fr;gap:12px;align-items:start">
 
-    <div class="gantt-preview-card" id="ganttPreviewCard" style="display:none">
-      <div class="card-title">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="14" x2="21" y2="14"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
-        Vista previa del timing
-        <span id="previewWeeksLabel" style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--txt3)"></span>
+        <!-- LEFT: tabla de actividades -->
+        <div class="card" id="actCard" style="margin-bottom:0">
+          <div class="card-title" style="justify-content:space-between">
+            <span style="display:flex;align-items:center;gap:7px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              Actividades
+            </span>
+            <span id="actCount" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--txt3)"></span>
+          </div>
+          <table class="act-table" style="width:100%">
+            <thead>
+              <tr>
+                <th style="width:18px">#</th>
+                <th style="min-width:130px">Actividad</th>
+                <th style="width:44px">Inicio</th>
+                <th style="width:44px">Dur.</th>
+                <th style="width:42px">Pred.</th>
+                <th style="width:22px"></th>
+              </tr>
+            </thead>
+            <tbody id="actBody"></tbody>
+          </table>
+          <button class="add-row-btn" onclick="addRow()">+ Agregar actividad</button>
+        </div>
+
+        <!-- RIGHT: gantt preview -->
+        <div class="gantt-preview-card" id="ganttPreviewCard" style="margin-bottom:0">
+          <div class="card-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="14" x2="21" y2="14"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
+            Vista previa en tiempo real
+            <span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--txt3)">
+              <span id="previewWeeksLabel"></span>
+              <span style="display:flex;align-items:center;gap:4px;background:var(--bg);border:0.5px solid var(--border2);border-radius:5px;padding:2px 6px">
+                <button onclick="changeWeeks(-1)" style="background:none;border:none;cursor:pointer;color:var(--blue);font-size:15px;line-height:1;padding:0 2px;font-weight:700">−</button>
+                <input type="number" id="weeksEditInline" min="4" max="52" value="12"
+                  style="width:32px;text-align:center;border:none;background:transparent;font-size:12px;font-weight:600;color:var(--txt);font-family:inherit;-moz-appearance:textfield"
+                  oninput="projectData.weeks=+this.value;document.getElementById('totalWeeks').value=this.value;recalcAll()">
+                <button onclick="changeWeeks(1)" style="background:none;border:none;cursor:pointer;color:var(--blue);font-size:15px;line-height:1;padding:0 2px;font-weight:700">+</button>
+                <span style="color:var(--txt3);font-size:10px">sem.</span>
+              </span>
+            </span>
+          </div>
+          <div class="gantt-svg-wrap" id="ganttSvgWrap"></div>
+        </div>
+
       </div>
-      <div class="gantt-svg-wrap" id="ganttSvgWrap"></div>
     </div>
 
     <div class="btn-row" id="generateBtnRow" style="display:none">
@@ -270,16 +351,21 @@ function updateApiIndicator() {
   const el = document.getElementById('apiIndicator');
   if (apiKey) {
     el.className = 'api-indicator ok';
-    el.textContent = '● API key configurada';
+    el.textContent = '● IA activa';
   } else {
     el.className = 'api-indicator missing';
-    el.textContent = '⚠ Configura tu API key';
+    el.textContent = '⚠ Sin API key — solo modo manual';
   }
+  // Show/hide AI-dependent elements
+  const analyzeBtn = document.getElementById('analyzeBtn');
+  const aiNote = document.getElementById('aiNote');
+  if (analyzeBtn) analyzeBtn.style.display = apiKey ? 'inline-flex' : 'none';
+  if (aiNote) aiNote.style.display = apiKey ? 'none' : 'flex';
 }
 
 function openApiModal() {
   document.getElementById('apiKeyInput').value = apiKey;
-  document.getElementById('cancelApiBtn').style.display = apiKey ? 'inline-flex' : 'none';
+  // Cancel always available — manual mode works without key
   document.getElementById('apiModal').classList.add('open');
 }
 
@@ -300,7 +386,7 @@ function saveApiKey() {
 }
 
 updateApiIndicator();
-if (!apiKey) openApiModal();
+// Don't block app load — manual mode works without API key
 
 // ── FILE HANDLING ────────────────────────────────────────────────────────
 let pdfBase64 = '';
@@ -333,7 +419,8 @@ function handleFile(file) {
     pdfBase64 = ev.target.result.split(',')[1];
     document.getElementById('fileName').textContent = file.name;
     document.getElementById('fileInfo').style.display = 'flex';
-    document.getElementById('analyzeBtn').disabled = false;
+    // Only enable analyze button if API key is present
+    if (apiKey) document.getElementById('analyzeBtn').disabled = false;
   };
   reader.readAsDataURL(file);
 }
@@ -418,7 +505,11 @@ function buildActivities(W) {
 const CAT_LABELS = { admin:'Administración', design:'Diseño', mech:'Mecánica/tooling', supply:'Suministros', control:'Control/visión/prog.', test:'Pruebas/entrega' };
 
 async function analyzeQuote() {
-  if (!apiKey) { openApiModal(); return; }
+  if (!apiKey) {
+    setStatus('error', 'Necesitas una API key para analizar con IA. Configúrala arriba o usa el modo manual.');
+    openApiModal();
+    return;
+  }
   document.getElementById('analyzeBtn').disabled = true;
   document.getElementById('step1').style.display = 'none';
   document.getElementById('step2').style.display = 'block';
@@ -439,6 +530,8 @@ Extrae:
 - IVA
 - Total con IVA
 - Semanas de ejecución (busca "EXECUTION TIME", "semanas", "weeks" — devuelve solo el número entero)
+
+IMPORTANTE: Si el PDF es un timing existente (contiene un diagrama de Gantt o tabla de actividades), extrae igualmente el cliente, proyecto, número de cotización y semanas. El sistema regenerará las actividades automáticamente.
 
 Responde ÚNICAMENTE con JSON válido sin texto adicional, sin markdown, sin bloques de código:
 {
@@ -493,15 +586,14 @@ Responde ÚNICAMENTE con JSON válido sin texto adicional, sin markdown, sin blo
     document.getElementById('pCliente').textContent = projectData.client;
     document.getElementById('pQuote').textContent = projectData.quote_number;
 
-    document.getElementById('pWeeks').textContent = (projectData.weeks || '12') + ' sem.';
-    // Auto-sync totalWeeks input with what AI detected
-    if (projectData.weeks) {
-      document.getElementById('totalWeeks').value = projectData.weeks;
-    }
+    // Weeks: AI-detected value is the single source of truth
+    document.getElementById('totalWeeks').value = W;
+    document.getElementById('pWeeks').textContent = W + ' sem.';
+    const inlineW = document.getElementById('weeksEditInline'); if (inlineW) inlineW.value = W;
     document.getElementById('projectInfoCard').style.display = 'block';
 
     renderTable();
-    document.getElementById('actCard').style.display = 'block';
+    document.getElementById('splitPanel').style.display = 'block';
     document.getElementById('generateBtnRow').style.display = 'flex';
     setStatus('success', activities.length + ' actividades detectadas. Revisa y ajusta antes de generar el PDF.');
 
@@ -523,20 +615,101 @@ function renderTable() {
     const catOpts = Object.entries(CAT_LABELS).map(([v,l]) => `<option value="${v}"${act.category===v?' selected':''}>${l}</option>`).join('');
     tr.innerHTML = `
       <td style="color:var(--txt3);font-weight:600;font-size:11px">${act.id}</td>
-      <td><input value="${escHtml(act.name)}" onchange="activities[${i}].name=this.value;renderGanttPreview()" style="min-width:150px"></td>
-      <td><input type="number" min="0" value="${act.start_day}" onchange="activities[${i}].start_day=+this.value;renderGanttPreview()" style="width:46px;text-align:center"></td>
-      <td><input type="number" min="1" value="${act.duration_days}" onchange="activities[${i}].duration_days=+this.value;renderGanttPreview()" style="width:46px;text-align:center"></td>
-      <td><input value="${escHtml(act.pred||'')}" onchange="activities[${i}].pred=this.value;renderGanttPreview()" style="width:50px;text-align:center"></td>
       <td>
-        <span class="cat-dot" id="dot${i}" style="background:${CAT_COLORS[act.category]||'#888'}"></span>
-        <select class="cat-sel" onchange="activities[${i}].category=this.value;document.getElementById('dot${i}').style.background=CAT_COLORS[this.value]||'#888';renderGanttPreview()">${catOpts}</select>
+        <input value="${escHtml(act.name)}" oninput="activities[${i}].name=this.value;renderGanttPreview()" style="width:100%;min-width:120px;font-size:11px">
+        <div style="margin-top:2px">
+          <span class="cat-dot" style="background:${CAT_COLORS[act.category]||'#888'}"></span>
+          <select class="cat-sel" style="font-size:10px" onchange="activities[${i}].category=this.value;this.previousElementSibling.style.background=CAT_COLORS[this.value]||'#888';renderGanttPreview()">${catOpts}</select>
+        </div>
       </td>
+      <td><input type="number" min="0" value="${act.start_day}" oninput="activities[${i}].start_day=+this.value;recascade(${i});renderGanttPreview()" style="width:40px;text-align:center;font-size:11px"></td>
+      <td><input type="number" min="1" value="${act.duration_days}" oninput="activities[${i}].duration_days=+this.value;recascade(${i});renderGanttPreview()" style="width:40px;text-align:center;font-size:11px"></td>
+      <td><input value="${escHtml(act.pred||'')}" oninput="activities[${i}].pred=this.value;renderGanttPreview()" style="width:38px;text-align:center;font-size:11px"></td>
       <td><button class="del-btn" onclick="deleteRow(${i})" title="Eliminar">×</button></td>`;
     body.appendChild(tr);
   });
 }
 
 function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── CASCADE RECALCULATION ─────────────────────────────────────────────────
+// When any duration or start_day changes, recalculate all downstream starts
+// based on predecessor chain
+function recascade(changedIdx) {
+  // Build a map id -> activity index
+  const idxById = {};
+  activities.forEach((a,i) => { idxById[a.id] = i; });
+
+  // Topological recalculation: for each activity that has predecessors,
+  // set start_day = max(end of all preds)
+  // Do multiple passes to handle chains
+  for (let pass = 0; pass < 3; pass++) {
+    activities.forEach((act, i) => {
+      if (!act.pred) return;
+      const preds = String(act.pred).split(',').map(p => p.trim()).filter(Boolean);
+      if (!preds.length) return;
+      let maxEnd = 0;
+      preds.forEach(pid => {
+        const pi = idxById[parseInt(pid)];
+        if (pi !== undefined) {
+          const end = activities[pi].start_day + activities[pi].duration_days;
+          if (end > maxEnd) maxEnd = end;
+        }
+      });
+      // Only push forward, never pull back (respects manual overrides)
+      if (maxEnd > act.start_day) act.start_day = maxEnd;
+    });
+  }
+
+  // Refresh inputs without full re-render (to preserve focus)
+  const rows = document.querySelectorAll('#actBody tr');
+  activities.forEach((act, i) => {
+    const row = rows[i];
+    if (!row) return;
+    const inputs = row.querySelectorAll('input[type=number]');
+    if (inputs[0]) inputs[0].value = act.start_day;
+    if (inputs[1]) inputs[1].value = act.duration_days;
+  });
+}
+
+// ── FULL RECALCULATE from W (rebuilds all 15 activities) ─────────────────
+function changeWeeks(delta) {
+  const inp = document.getElementById('weeksEditInline');
+  const cur = parseInt(inp.value) || 12;
+  const nw = Math.min(52, Math.max(4, cur + delta));
+  inp.value = nw;
+  document.getElementById('totalWeeks').value = nw;
+  if (projectData) projectData.weeks = nw;
+  rescaleWeeks(nw);
+}
+
+// Rescale: keep activity names & categories, proportionally adjust days
+function rescaleWeeks(newW) {
+  const oldD = activities.reduce((m,a) => Math.max(m, a.start_day + a.duration_days), 1);
+  const newD = newW * 5;
+  const ratio = newD / oldD;
+  activities = activities.map(a => ({
+    ...a,
+    start_day:      Math.round(a.start_day * ratio),
+    duration_days:  Math.max(1, Math.round(a.duration_days * ratio))
+  }));
+  // Apply business rules clamps after scaling
+  const d15idx = activities.findIndex(a => a.id === 15);
+  if (d15idx >= 0) {
+    activities[d15idx].duration_days = Math.min(5, Math.max(3, activities[d15idx].duration_days));
+    activities[d15idx].start_day = newD - activities[d15idx].duration_days;
+  }
+  if (projectData) projectData.weeks = newW;
+  document.getElementById('totalWeeks').value = newW;
+  renderTable();
+}
+
+function recalcAll() {
+  const W = parseInt(document.getElementById('totalWeeks').value) || 12;
+  if (projectData) projectData.weeks = W;
+  activities = buildActivities(W);
+  renderTable();
+}
 
 // ── GANTT SVG PREVIEW ────────────────────────────────────────────────────
 const CAT_HEX = { admin:'#888780', design:'#185FA5', mech:'#0F6E56', supply:'#BA7517', control:'#533AB7', test:'#993C1D' };
@@ -546,18 +719,25 @@ function renderGanttPreview() {
   const card = document.getElementById('ganttPreviewCard');
   const wrap = document.getElementById('ganttSvgWrap');
   if (!activities || !activities.length) { card.style.display='none'; return; }
-  card.style.display = 'block';
+  card.style.display = 'block'; // always visible inside split panel
 
-  const W = parseInt(document.getElementById('totalWeeks').value) || 12;
+  // Priority: projectData.weeks (from AI) > field value > default 12
+  const _fieldW = parseInt(document.getElementById('totalWeeks').value) || 12;
+  const _dataW  = (projectData && projectData.weeks) ? parseInt(projectData.weeks) : null;
+  const W = _dataW || _fieldW;
+  // Keep field in sync
+  if (_dataW && document.getElementById('totalWeeks').value != _dataW) {
+    document.getElementById('totalWeeks').value = _dataW;
+  }
   const D = W * 5;
   const totalDays = D;
 
   // Layout
   const SVG_W = 860;
-  const LABEL_W = 180;
+  const LABEL_W = 210;
   const CHART_X = LABEL_W + 4;
   const CHART_W = SVG_W - CHART_X - 8;
-  const ROW_H = 28;
+  const ROW_H = 32;
   const BAR_H = 14;
   const HEADER_H = 30;
   const N = activities.length;
@@ -634,9 +814,9 @@ function renderGanttPreview() {
     svgParts.push(`<line x1="0" y1="${ry+ROW_H}" x2="${SVG_W}" y2="${ry+ROW_H}" stroke="#E8E6DE" stroke-width="0.3"/>`);
 
     // Label — truncate to fit
-    const maxLabelChars = 26;
+    const maxLabelChars = 34;
     let lbl = act.name.length > maxLabelChars ? act.name.substring(0,maxLabelChars-1)+'…' : act.name;
-    svgParts.push(`<text x="4" y="${(ry+ROW_H/2+3).toFixed(1)}" font-size="9" fill="#1A1A18">${escHtml(lbl)}</text>`);
+    svgParts.push(`<text x="4" y="${(ry+ROW_H/2+3).toFixed(1)}" font-size="9.5" fill="#1A1A18">${escHtml(lbl)}</text>`);
     if (act.pred) {
       svgParts.push(`<text x="${LABEL_W-3}" y="${(ry+ROW_H/2+3).toFixed(1)}" text-anchor="end" font-size="7.5" fill="#8A8880">${escHtml(String(act.pred))}</text>`);
     }
@@ -686,14 +866,29 @@ function renderGanttPreview() {
   svgParts.push('</svg>');
 
   wrap.innerHTML = svgParts.join('');
-  document.getElementById('previewWeeksLabel').textContent = W + ' semanas · ' + activities.length + ' actividades';
+  document.getElementById('previewWeeksLabel').textContent = activities.length + ' actividades';
+  const iw = document.getElementById('weeksEditInline');
+  if (iw && iw.value != W) iw.value = W;
 }
 function addRow() {
   const maxId = activities.reduce((m,a)=>Math.max(m,a.id),0);
   activities.push({id:maxId+1,name:'Nueva actividad',start_day:0,duration_days:5,pred:'',category:'mech'});
   renderTable();
 }
-function deleteRow(i){ activities.splice(i,1); renderTable(); }
+function deleteRow(i) {
+  activities.splice(i, 1);
+  // Renumber ids sequentially
+  activities.forEach((a, idx) => { a.id = idx + 1; });
+  // Fix pred references: remove refs to deleted ids
+  const validIds = new Set(activities.map(a => String(a.id)));
+  activities.forEach(a => {
+    if (a.pred) {
+      const cleaned = String(a.pred).split(',').map(p=>p.trim()).filter(p => validIds.has(p));
+      a.pred = cleaned.join(',');
+    }
+  });
+  renderTable();
+}
 
 // ── GENERATE PDF ─────────────────────────────────────────────────────────
 function generatePDF() {
@@ -704,6 +899,9 @@ function generatePDF() {
   setStatus('loading', 'Generando PDF…');
 
   try {
+    // Always use the weeks detected from the quote, not just the input field
+    const detectedWeeks = (projectData && projectData.weeks) ? parseInt(projectData.weeks) : null;
+    if (detectedWeeks) document.getElementById('totalWeeks').value = detectedWeeks;
     const startDateVal = document.getElementById('startDate').value;
     const startDate = startDateVal ? new Date(startDateVal + 'T12:00:00') : new Date();
     const totalWeeks = parseInt(document.getElementById('totalWeeks').value) || 12;
@@ -988,15 +1186,59 @@ function getMonthRanges(startDate, totalWeeks) {
 
 function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
+function openManualMode() {
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('step1b').style.display = 'block';
+  // Set default start date
+  const d = new Date(); d.setDate(d.getDate()+7);
+  document.getElementById('m_startdate').value = d.toISOString().split('T')[0];
+}
+
+function startManual() {
+  const title = document.getElementById('m_title').value.trim();
+  const client = document.getElementById('m_client').value.trim();
+  const W = parseInt(document.getElementById('m_weeks').value) || 12;
+  if (!title || !client) { alert('El nombre del proyecto y el cliente son obligatorios.'); return; }
+  const sd = document.getElementById('m_startdate').value;
+  if (sd) document.getElementById('startDate').value = sd;
+  projectData = {
+    title:       title.substring(0,55),
+    subtitle:    document.getElementById('m_subtitle').value.trim().substring(0,75),
+    client:      client,
+    contact:     document.getElementById('m_contact').value.trim(),
+    quote_number:document.getElementById('m_quote').value.trim() || 'MANUAL',
+    quote_date:  document.getElementById('m_date').value.trim() || new Date().toLocaleDateString('es-MX'),
+    total_usd:   '',
+    grand_total_usd: '',
+    weeks:       W
+  };
+  activities = buildActivities(W);
+  document.getElementById('step1b').style.display = 'none';
+  document.getElementById('step2').style.display = 'block';
+  document.getElementById('previewTitle').textContent = projectData.title;
+  document.getElementById('previewSub').textContent = projectData.subtitle || '';
+  document.getElementById('pCliente').textContent = projectData.client;
+  document.getElementById('pQuote').textContent = projectData.quote_number;
+  document.getElementById('pWeeks').textContent = W + ' sem.';
+  document.getElementById('totalWeeks').value = W;
+  const inlineW = document.getElementById('weeksEditInline'); if (inlineW) inlineW.value = W;
+  document.getElementById('projectInfoCard').style.display = 'block';
+  renderTable();
+  document.getElementById('splitPanel').style.display = 'block';
+  document.getElementById('generateBtnRow').style.display = 'flex';
+  setStatus('success', 'Timing manual generado con ' + activities.length + ' actividades. Ajusta los valores y genera el PDF.');
+}
+
 function resetApp() {
   pdfBase64 = ''; projectData = {}; activities = [];
   document.getElementById('step1').style.display = 'block';
+  document.getElementById('step1b').style.display = 'none';
   document.getElementById('step2').style.display = 'none';
   document.getElementById('step3').style.display = 'none';
   document.getElementById('fileInfo').style.display = 'none';
   document.getElementById('analyzeBtn').disabled = true;
   document.getElementById('projectInfoCard').style.display = 'none';
-  document.getElementById('actCard').style.display = 'none';
+  document.getElementById('splitPanel').style.display = 'none';
   document.getElementById('generateBtnRow').style.display = 'none';
   document.getElementById('statusBar').style.display = 'none';
   document.getElementById('generateBtn').disabled = false;
