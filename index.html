@@ -17,6 +17,18 @@
   --txt:#1A1A18;--txt2:#5F5E5A;--txt3:#8A8880;
   --radius:10px;--radius-sm:6px;
 }
+[data-theme="dark"]{
+  --bg:#16161A;--card:#1F1F26;
+  --border:#33333D;--border2:#44444F;
+  --txt:#EDEDEA;--txt2:#A8A8A2;--txt3:#76766F;
+}
+[data-theme="dark"] .drop-zone:hover,[data-theme="dark"] .drop-zone.drag{background:#1A2533}
+[data-theme="dark"] .status-bar.loading{background:#15202E;border-color:#28435F}
+[data-theme="dark"] .status-bar.success{background:#0F231D;border-color:#1D4A3C}
+[data-theme="dark"] .status-bar.error{background:#2A1716;border-color:#5A2B2A}
+[data-theme="dark"] .gantt-svg-wrap{background:#26262E}
+[data-theme="dark"] .dl-card{background:var(--card)}
+[data-theme="dark"] #aiNote{background:#2A2415 !important;border-color:#5C4A1A !important;color:#D9B45C !important}
 body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--txt);font-size:14px;line-height:1.5;min-height:100vh}
 
 .topbar{background:var(--navy);padding:14px 24px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
@@ -104,10 +116,14 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
 
 /* Gantt mini preview */
 .gantt-wrap{overflow-x:auto;margin-top:10px;border:0.5px solid var(--border);border-radius:var(--radius-sm)}
-.gantt-preview-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px}
+.gantt-preview-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;min-width:0;overflow:hidden}
+.split-grid{display:grid;grid-template-columns:minmax(440px,480px) minmax(0,1fr);gap:12px;align-items:start}
+@media (max-width:1100px){.split-grid{grid-template-columns:1fr}}
+.act-scroll{overflow-x:auto;max-width:100%}
+#actCard{min-width:0;overflow:hidden}
 .gantt-preview-card .card-title{font-size:11px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:12px;display:flex;align-items:center;gap:7px}
-.gantt-svg-wrap{overflow-x:auto;border:0.5px solid var(--border);border-radius:var(--radius-sm);background:#fff}
-.gantt-svg-wrap svg{display:block;min-width:500px}
+.gantt-svg-wrap{overflow-x:auto;border:0.5px solid var(--border);border-radius:var(--radius-sm);background:#fff;max-width:100%}
+.gantt-svg-wrap svg{display:block;min-width:500px;max-width:none}
 </style>
 </head>
 <body>
@@ -115,14 +131,30 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
 <!-- API Key Modal -->
 <div class="modal-overlay" id="apiModal">
   <div class="modal">
-    <h2>🔑 Configurar API Key</h2>
-    <p>Para analizar cotizaciones con IA necesitas una clave de Anthropic. Se guarda solo en tu navegador (nunca sale de tu computadora).</p>
-    <label>API Key de Anthropic</label>
+    <h2>🔑 Configurar IA</h2>
+    <p>Elige tu proveedor de IA y pega tu API key. Se guarda solo en tu navegador y se envía únicamente al proveedor que elijas.</p>
+    <label>Proveedor de IA</label>
+    <select id="aiProviderSelect" style="width:100%;padding:9px 12px;border:0.5px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;margin-bottom:14px;font-family:inherit;background:var(--card);color:var(--txt)" onchange="updateProviderHint()">
+      <option value="anthropic">Anthropic (Claude)</option>
+      <option value="gemini">Google Gemini — tiene capa gratuita</option>
+      <option value="openai">OpenAI (GPT)</option>
+    </select>
+    <label>API Key</label>
     <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-...">
-    <div class="modal-note">
-      Obtén tu key en <strong>console.anthropic.com</strong> → API Keys → Create Key.<br>
-      La clave se guarda en localStorage de tu navegador y nunca se envía a ningún servidor excepto directamente a Anthropic.<br><br>
-      <strong>Sin API key</strong> puedes usar el <em>modo manual</em> para crear timings ingresando los datos a mano.
+    <label>Modelo</label>
+    <select id="aiModelSelect" style="width:100%;padding:9px 12px;border:0.5px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;margin-bottom:8px;font-family:monospace;background:var(--card);color:var(--txt)" onchange="document.getElementById('aiModelCustomWrap').style.display = this.value==='__custom__' ? 'block':'none'">
+    </select>
+    <div id="aiModelCustomWrap" style="display:none">
+      <input type="text" id="aiModelInput" placeholder="nombre-del-modelo" style="font-family:monospace;margin-bottom:14px">
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <button type="button" onclick="detectModels()" id="detectBtn" style="background:var(--bg);border:0.5px solid var(--border2);border-radius:5px;padding:5px 12px;font-size:11px;cursor:pointer;color:var(--blue);font-family:inherit">⟳ Detectar modelos disponibles con mi key</button>
+      <span id="detectStatus" style="font-size:11px;color:var(--txt3)"></span>
+    </div>
+    <div class="modal-note" id="providerHint">
+      Obtén tu key en <strong>console.anthropic.com</strong> → API Keys.<br>
+      La clave se guarda en localStorage de tu navegador.<br><br>
+      <strong>Sin API key</strong> puedes usar el <em>modo manual</em>.
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn-primary" onclick="saveApiKey()" style="flex:1">Guardar y continuar</button>
@@ -139,7 +171,8 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
     <p>ADV Mechanics · Uso interno</p>
   </div>
   <div class="topbar-right">
-    <span class="api-indicator" id="apiIndicator" onclick="openApiModal()" title="Clic para cambiar API key"></span>
+    <button id="themeToggle" onclick="toggleTheme()" title="Cambiar tema claro/oscuro" style="background:rgba(255,255,255,0.1);border:0.5px solid rgba(255,255,255,0.15);border-radius:5px;color:#8DA4C8;cursor:pointer;padding:3px 9px;font-size:13px">◐</button>
+    <span class="api-indicator" id="apiIndicator" onclick="openApiModal()" title="Clic para cambiar proveedor de IA"></span>
   </div>
 </div>
 
@@ -197,6 +230,10 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Crear timing manual
       </button>
+      <button class="btn-secondary" id="resumeBtn" onclick="resumeWork()" style="display:none">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        Continuar trabajo anterior
+      </button>
     </div>
   </div>
 
@@ -237,6 +274,14 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
           <input type="number" id="m_weeks" value="12" min="4" max="52">
         </div>
         <div class="meta-field">
+          <label>Plantilla de actividades</label>
+          <select id="m_template" style="width:100%;padding:8px 11px;border:0.5px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;background:var(--bg);color:var(--txt);font-family:inherit">
+            <option value="estandar">Estación estándar (15 act.)</option>
+            <option value="eol">Estación EOL (13 act.)</option>
+            <option value="retrofit">Retrofit / Modificación (10 act.)</option>
+          </select>
+        </div>
+        <div class="meta-field">
           <label>Fecha de inicio</label>
           <input type="date" id="m_startdate">
         </div>
@@ -272,7 +317,7 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
 
     <!-- SPLIT LAYOUT: tabla izquierda | gantt derecha -->
     <div id="splitPanel" style="display:none">
-      <div style="display:grid;grid-template-columns:340px 1fr;gap:12px;align-items:start">
+      <div class="split-grid">
 
         <!-- LEFT: tabla de actividades -->
         <div class="card" id="actCard" style="margin-bottom:0">
@@ -283,19 +328,22 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
             </span>
             <span id="actCount" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--txt3)"></span>
           </div>
+          <div class="act-scroll">
           <table class="act-table" style="width:100%">
             <thead>
               <tr>
-                <th style="width:18px">#</th>
-                <th style="min-width:130px">Actividad</th>
-                <th style="width:44px">Inicio</th>
-                <th style="width:44px">Dur.</th>
-                <th style="width:42px">Pred.</th>
-                <th style="width:22px"></th>
+                <th style="width:16px;padding:0 2px 6px">#</th>
+                <th style="min-width:110px;padding:0 3px 6px">Actividad</th>
+                <th style="width:38px;padding:0 1px 6px">Inicio</th>
+                <th style="width:38px;padding:0 1px 6px">Dur.</th>
+                <th style="width:36px;padding:0 1px 6px">Pred.</th>
+                <th style="width:36px;padding:0 1px 6px">%</th>
+                <th style="width:38px;padding:0 1px 6px"></th>
               </tr>
             </thead>
             <tbody id="actBody"></tbody>
           </table>
+          </div>
           <button class="add-row-btn" onclick="addRow()">+ Agregar actividad</button>
         </div>
 
@@ -327,6 +375,19 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Generar y descargar PDF
       </button>
+      <button class="btn-secondary" onclick="exportExcel()" title="Exporta el timing a Excel">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+        Excel
+      </button>
+      <button class="btn-secondary" onclick="exportJSON()" title="Guarda la configuración para reutilizarla">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Exportar config
+      </button>
+      <button class="btn-secondary" onclick="document.getElementById('importJsonInput').click()" title="Carga una configuración guardada">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Importar config
+      </button>
+      <input type="file" id="importJsonInput" accept=".json" style="display:none" onchange="importJSON(this)">
       <button class="btn-secondary" onclick="resetApp()">← Nueva cotización</button>
     </div>
   </div>
@@ -343,15 +404,138 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── API KEY ──────────────────────────────────────────────────────────────
-let apiKey = localStorage.getItem('adv_anthropic_key') || '';
+let apiKey = localStorage.getItem('adv_ai_key') || localStorage.getItem('adv_anthropic_key') || '';
+let aiProvider = localStorage.getItem('adv_ai_provider') || 'anthropic';
+let aiModel = localStorage.getItem('adv_ai_model') || '';
+
+// ── THEME ─────────────────────────────────────────────────────────────────
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', cur);
+  localStorage.setItem('adv_theme', cur);
+}
+(function(){
+  const t = localStorage.getItem('adv_theme');
+  if (t === 'dark') document.documentElement.setAttribute('data-theme','dark');
+})();
+
+// ── FERIADOS OFICIALES MÉXICO (LFT Art. 74) ──────────────────────────────
+// Formato YYYY-MM-DD. Incluye 2026 y 2027.
+const MX_HOLIDAYS = new Set([
+  '2026-01-01','2026-02-02','2026-03-16','2026-05-01','2026-09-16','2026-11-16','2026-12-25',
+  '2027-01-01','2027-02-01','2027-03-15','2027-05-01','2027-09-16','2027-11-15','2027-12-25',
+]);
+function isWorkDay(d) {
+  if (d.getDay()===0 || d.getDay()===6) return false;
+  const iso = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  return !MX_HOLIDAYS.has(iso);
+}
+
+const PROVIDER_DEFAULTS = {
+  anthropic: {
+    model: 'claude-sonnet-4-5',
+    models: ['claude-sonnet-4-5','claude-opus-4-1','claude-haiku-4-5','claude-3-7-sonnet-latest'],
+    hint: 'Obtén tu key en <strong>console.anthropic.com</strong> → API Keys.',
+    placeholder: 'sk-ant-api03-...'
+  },
+  gemini: {
+    model: 'gemini-flash-latest',
+    models: ['gemini-flash-latest','gemini-flash-lite-latest','gemini-pro-latest','gemini-2.5-flash','gemini-2.5-pro'],
+    hint: 'Obtén tu key GRATIS en <strong>aistudio.google.com/apikey</strong>. La capa gratuita es suficiente para uso normal.',
+    placeholder: 'AIzaSy...'
+  },
+  openai: {
+    model: 'gpt-4o',
+    models: ['gpt-4o','gpt-4o-mini','gpt-4.1','gpt-4.1-mini','o4-mini'],
+    hint: 'Obtén tu key en <strong>platform.openai.com</strong> → API Keys.',
+    placeholder: 'sk-proj-...'
+  }
+};
+
+function updateProviderHint() {
+  const p = document.getElementById('aiProviderSelect').value;
+  const cfg = PROVIDER_DEFAULTS[p];
+  document.getElementById('providerHint').innerHTML = cfg.hint + '<br>La clave se guarda en localStorage de tu navegador.<br><br><strong>Sin API key</strong> puedes usar el <em>modo manual</em>.';
+  document.getElementById('apiKeyInput').placeholder = cfg.placeholder;
+  populateModelSelect(cfg.models, aiModel);
+  document.getElementById('detectStatus').textContent = '';
+}
+
+function populateModelSelect(models, selected) {
+  const sel = document.getElementById('aiModelSelect');
+  sel.innerHTML = '';
+  models.forEach((m, i) => {
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = m + (i===0 ? ' (recomendado)' : '');
+    sel.appendChild(opt);
+  });
+  const custom = document.createElement('option');
+  custom.value = '__custom__';
+  custom.textContent = 'Otro modelo (escribir manualmente)…';
+  sel.appendChild(custom);
+  // Restore selection
+  if (selected && models.includes(selected)) {
+    sel.value = selected;
+  } else if (selected && selected.length) {
+    sel.value = '__custom__';
+    document.getElementById('aiModelInput').value = selected;
+    document.getElementById('aiModelCustomWrap').style.display = 'block';
+  } else {
+    sel.value = models[0];
+  }
+}
+
+// Query the provider's models endpoint with the user's key
+async function detectModels() {
+  const provider = document.getElementById('aiProviderSelect').value;
+  const key = document.getElementById('apiKeyInput').value.trim() || apiKey;
+  const status = document.getElementById('detectStatus');
+  if (!key) { status.textContent = 'Primero pega tu API key'; return; }
+  status.textContent = 'Consultando…';
+  try {
+    let models = [];
+    if (provider === 'gemini') {
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + key);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      models = (d.models || [])
+        .filter(m => (m.supportedGenerationMethods||[]).includes('generateContent'))
+        .map(m => m.name.replace('models/',''))
+        .filter(n => n.includes('gemini'))
+        .sort().reverse();
+    } else if (provider === 'openai') {
+      const r = await fetch('https://api.openai.com/v1/models', { headers: { 'Authorization': 'Bearer ' + key } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      models = (d.data || []).map(m => m.id)
+        .filter(id => /^(gpt-4|gpt-5|o[0-9])/.test(id) && !id.includes('audio') && !id.includes('realtime') && !id.includes('tts'))
+        .sort().reverse();
+    } else if (provider === 'anthropic') {
+      const r = await fetch('https://api.anthropic.com/v1/models', {
+        headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      models = (d.data || []).map(m => m.id);
+    }
+    if (!models.length) throw new Error('Sin modelos compatibles');
+    populateModelSelect(models, models[0]);
+    status.textContent = '✓ ' + models.length + ' modelos encontrados';
+  } catch(e) {
+    status.textContent = '✗ ' + e.message;
+  }
+}
 
 function updateApiIndicator() {
   const el = document.getElementById('apiIndicator');
   if (apiKey) {
     el.className = 'api-indicator ok';
-    el.textContent = '● IA activa';
+    const pNames = {anthropic:'Claude', gemini:'Gemini', openai:'GPT'};
+    el.textContent = '● IA activa (' + (pNames[aiProvider]||aiProvider) + ')';
   } else {
     el.className = 'api-indicator missing';
     el.textContent = '⚠ Sin API key — solo modo manual';
@@ -365,7 +549,8 @@ function updateApiIndicator() {
 
 function openApiModal() {
   document.getElementById('apiKeyInput').value = apiKey;
-  // Cancel always available — manual mode works without key
+  document.getElementById('aiProviderSelect').value = aiProvider;
+  updateProviderHint();
   document.getElementById('apiModal').classList.add('open');
 }
 
@@ -375,18 +560,33 @@ function closeModal() {
 
 function saveApiKey() {
   const val = document.getElementById('apiKeyInput').value.trim();
-  if (!val.startsWith('sk-')) {
-    alert('La API key debe empezar con "sk-".');
-    return;
-  }
+  const provider = document.getElementById('aiProviderSelect').value;
+  if (!val) { alert('Ingresa una API key o presiona Cancelar para usar el modo manual.'); return; }
   apiKey = val;
-  localStorage.setItem('adv_anthropic_key', apiKey);
+  aiProvider = provider;
+  const selVal = document.getElementById('aiModelSelect').value;
+  aiModel = selVal === '__custom__'
+    ? document.getElementById('aiModelInput').value.trim()
+    : selVal;
+  localStorage.setItem('adv_ai_key', apiKey);
+  localStorage.setItem('adv_ai_provider', aiProvider);
+  localStorage.setItem('adv_ai_model', aiModel);
   updateApiIndicator();
   closeModal();
 }
 
 updateApiIndicator();
 // Don't block app load — manual mode works without API key
+// Show resume button if there's saved work
+try {
+  const saved = localStorage.getItem('adv_timing_work');
+  if (saved) {
+    const data = JSON.parse(saved);
+    if (data.activities && data.activities.length && Date.now()-(data.ts||0) < 7*24*3600*1000) {
+      document.getElementById('resumeBtn').style.display = 'inline-flex';
+    }
+  }
+} catch(e) {}
 
 // ── FILE HANDLING ────────────────────────────────────────────────────────
 let pdfBase64 = '';
@@ -437,72 +637,186 @@ function setStatus(type, msg) {
 
 // ── ANALYZE ──────────────────────────────────────────────────────────────
 const CAT_COLORS = { admin:'#888780', design:'#185FA5', mech:'#0F6E56', supply:'#BA7517', control:'#533AB7', test:'#993C1D' };
+const CAT_LABELS = { admin:'Administración', design:'Diseño', mech:'Mecánica/tooling', supply:'Suministros', control:'Control/visión/prog.', test:'Pruebas/entrega' };
 
 function clamp(val, min, max) { return Math.min(Math.max(val, min), max); }
 
-function buildActivities(W) {
-  const D = W * 5; // total work days
+// ── PLANTILLAS DE PROYECTO ────────────────────────────────────────────────
+const TEMPLATES = {
+  estandar: {
+    name: 'Estación estándar',
+    acts: [
+      // [name, startFn, durFn, pred, cat] — fns receive (D, ctx) where ctx holds computed durations
+      ['Recepción de OC',                  'fixed:0',   () => 1,                                  '',              'admin'],
+      ['Diseño de estación y toolings',     'after:1',   D => clamp(Math.round(0.17*D),3,15),      '1',             'design'],
+      ['Liberación de diseño',              'after:2',   D => clamp(Math.round(0.08*D),3,15),      '2',             'design'],
+      ['Recepción de piezas',               'after:1',   D => Math.max(1,Math.round(0.03*D)),      '1',             'admin'],
+      ['Desarrollo y armado estructura',    'after:3',   D => Math.max(2,Math.round(0.17*D)),      '3',             'mech'],
+      ['Desarrollo y maquinado tooling',    'after:3',   D => Math.max(2,Math.round(0.17*D)),      '3',             'mech'],
+      ['Suministro componentes eléctricos', 'after:1',   (D,c) => Math.max(Math.round(0.33*D), c[2]+c[3]+2), '1',  'supply'],
+      ['Suministro componentes neumáticos', 'after:1',   (D,c) => c[7],                            '1',             'supply'],
+      ['Desarrollo gabinete de control',    'after:7',   D => Math.max(2,Math.round(0.17*D)),      '7',             'control'],
+      ['Integración equipo neumático',      'after:8',   D => Math.max(2,Math.round(0.08*D)),      '8',             'mech'],
+      ['Integración mecánica estación',     'after:5',   D => Math.max(2,Math.round(0.08*D)),      '5',             'mech'],
+      ['Integración sensores y visión',     'after:7',   D => Math.max(2,Math.round(0.08*D)),      '7',             'control'],
+      ['Desarrollo programación PLC y HMI', 'after:7',   D => Math.max(1,Math.round(0.05*D)),      '7',             'control'],
+      ['Pruebas internas y ajustes',        'afterMax:9,10,11,12,13', D => Math.max(2,Math.round(0.13*D)), '9,10,11,12,13', 'test'],
+      ['Buy off y puesta en marcha planta', 'end',       D => clamp(Math.round(0.10*D),3,5),       '14',            'test'],
+    ]
+  },
+  eol: {
+    name: 'Estación EOL (End of Line)',
+    acts: [
+      ['Recepción de OC',                  'fixed:0',   () => 1,                                  '',     'admin'],
+      ['Diseño de estación EOL',            'after:1',   D => clamp(Math.round(0.15*D),3,15),      '1',    'design'],
+      ['Liberación de diseño',              'after:2',   D => clamp(Math.round(0.06*D),3,15),      '2',    'design'],
+      ['Suministro componentes eléctricos', 'after:1',   (D,c) => Math.max(Math.round(0.35*D), c[2]+c[3]+2), '1', 'supply'],
+      ['Suministro componentes neumáticos', 'after:1',   (D,c) => c[4],                            '1',    'supply'],
+      ['Suministro sensores y visión',      'after:1',   (D,c) => c[4],                            '1',    'supply'],
+      ['Armado de estructura y tooling',    'after:3',   D => Math.max(2,Math.round(0.18*D)),      '3',    'mech'],
+      ['Gabinete de control y cableado',    'after:4',   D => Math.max(2,Math.round(0.15*D)),      '4',    'control'],
+      ['Integración neumática',             'after:5',   D => Math.max(2,Math.round(0.08*D)),      '5',    'mech'],
+      ['Integración sensores/visión/scanner','after:6',  D => Math.max(2,Math.round(0.10*D)),      '6',    'control'],
+      ['Programación PLC, HMI y trazabilidad','after:4', D => Math.max(2,Math.round(0.12*D)),      '4',    'control'],
+      ['Pruebas funcionales por variante',  'afterMax:7,8,9,10,11', D => Math.max(3,Math.round(0.15*D)), '7,8,9,10,11', 'test'],
+      ['Buy off y puesta en marcha planta', 'end',       D => clamp(Math.round(0.10*D),3,5),       '12',   'test'],
+    ]
+  },
+  retrofit: {
+    name: 'Retrofit / Modificación',
+    acts: [
+      ['Recepción de OC',                  'fixed:0',   () => 1,                              '',    'admin'],
+      ['Levantamiento y diagnóstico',       'after:1',   D => clamp(Math.round(0.10*D),2,8),   '1',   'design'],
+      ['Ingeniería de modificación',        'after:2',   D => clamp(Math.round(0.15*D),3,15),  '2',   'design'],
+      ['Suministro de componentes',         'after:3',   D => Math.max(3,Math.round(0.30*D)),  '3',   'supply'],
+      ['Desmontaje y preparación',          'after:3',   D => Math.max(1,Math.round(0.06*D)),  '3',   'mech'],
+      ['Modificación mecánica',             'after:4',   D => Math.max(2,Math.round(0.15*D)),  '4,5', 'mech'],
+      ['Modificación eléctrica y control',  'after:4',   D => Math.max(2,Math.round(0.15*D)),  '4,5', 'control'],
+      ['Actualización programación PLC/HMI','after:7',   D => Math.max(1,Math.round(0.08*D)),  '7',   'control'],
+      ['Pruebas y validación',              'afterMax:6,7,8', D => Math.max(2,Math.round(0.12*D)), '6,7,8', 'test'],
+      ['Buy off y arranque',                'end',       D => clamp(Math.round(0.08*D),3,5),   '9',   'test'],
+    ]
+  }
+};
 
-  // ── Durations with business rules ──────────────────────────────────────
-  const d1  = 1;
-  const d2  = clamp(Math.round(0.17 * D), 3, 15);   // Diseño: min 3, max 15
-  const d3  = clamp(Math.round(0.08 * D), 3, 15);   // Liberación diseño: min 3, max 15
-  const d4  = Math.max(1, Math.round(0.03 * D));
-  const d5  = Math.max(2, Math.round(0.17 * D));
-  const d6  = Math.max(2, Math.round(0.17 * D));
-  // Suministros: siempre los más largos — mínimo d2+d3+2
-  const d7  = Math.max(Math.round(0.33 * D), d2 + d3 + 2);
-  const d8  = d7;  // neumático = eléctrico, ambos son los más pesados
-  const d9  = Math.max(2, Math.round(0.17 * D));
-  const d10 = Math.max(2, Math.round(0.08 * D));
-  const d11 = Math.max(2, Math.round(0.08 * D));
-  const d12 = Math.max(2, Math.round(0.08 * D));
-  const d13 = Math.max(1, Math.round(0.05 * D));
-  const d14 = Math.max(2, Math.round(0.13 * D));
-  const d15 = clamp(Math.round(0.10 * D), 3, 5);    // Buy off: min 3, max 5
+let currentTemplate = 'estandar';
 
-  // ── Start days: chain from predecessors ───────────────────────────────
-  const s1  = 0;
-  const s2  = s1 + d1;                    // after OC
-  const s3  = s2 + d2;                    // after diseño
-  const s4  = s1 + d1;                    // parallel with diseño
-  const s7  = s1 + d1;                    // suministros arrancan día 1
-  const s8  = s1 + d1;
-  const s5  = s3 + d3;                    // after liberación
-  const s6  = s3 + d3;
-  const s9  = s7 + d7;                    // after suministro eléctrico
-  const s10 = s8 + d8;                    // after suministro neumático
-  const s11 = s5 + d5;                    // after armado estructura
-  const s12 = s7 + d7;                    // after suministro eléctrico
-  const s13 = s7 + d7;                    // after suministro eléctrico
-  // Pruebas: after latest of 9,10,11,12,13
-  const s14 = Math.max(s9+d9, s10+d10, s11+d11, s12+d12, s13+d13);
-  // Buy off: placed so it ends exactly on D
-  const s15 = D - d15;
+function buildActivities(W, templateKey) {
+  const tpl = TEMPLATES[templateKey || currentTemplate] || TEMPLATES.estandar;
+  const D = W * 5;
+  const n = tpl.acts.length;
 
-  // ── Safety: ensure pruebas fits before buy off ────────────────────────
-  // If s14+d14 > s15, compress d14
-  const d14f = Math.max(1, Math.min(d14, s15 - s14));
+  // Pass 1: compute durations (ctx is 1-indexed by activity id)
+  const durs = {};
+  tpl.acts.forEach((a, i) => {
+    const id = i + 1;
+    durs[id] = a[2](D, durs);
+  });
 
-  return [
-    {id:1,  name:'Recepción de OC',                  start_day:s1,  duration_days:d1,   pred:'',              category:'admin'},
-    {id:2,  name:'Diseño de estación y toolings',     start_day:s2,  duration_days:d2,   pred:'1',             category:'design'},
-    {id:3,  name:'Liberación de diseño',              start_day:s3,  duration_days:d3,   pred:'2',             category:'design'},
-    {id:4,  name:'Recepción de piezas',               start_day:s4,  duration_days:d4,   pred:'1',             category:'admin'},
-    {id:5,  name:'Desarrollo y armado estructura',    start_day:s5,  duration_days:d5,   pred:'3',             category:'mech'},
-    {id:6,  name:'Desarrollo y maquinado tooling',    start_day:s6,  duration_days:d6,   pred:'3',             category:'mech'},
-    {id:7,  name:'Suministro componentes eléctricos', start_day:s7,  duration_days:d7,   pred:'1',             category:'supply'},
-    {id:8,  name:'Suministro componentes neumáticos', start_day:s8,  duration_days:d8,   pred:'1',             category:'supply'},
-    {id:9,  name:'Desarrollo gabinete de control',    start_day:s9,  duration_days:d9,   pred:'7',             category:'control'},
-    {id:10, name:'Integración equipo neumático',      start_day:s10, duration_days:d10,  pred:'8',             category:'mech'},
-    {id:11, name:'Integración mecánica estación',     start_day:s11, duration_days:d11,  pred:'5',             category:'mech'},
-    {id:12, name:'Integración sensores y visión',     start_day:s12, duration_days:d12,  pred:'7',             category:'control'},
-    {id:13, name:'Desarrollo programación PLC y HMI', start_day:s13, duration_days:d13,  pred:'7',             category:'control'},
-    {id:14, name:'Pruebas internas y ajustes',        start_day:s14, duration_days:d14f, pred:'9,10,11,12,13', category:'test'},
-    {id:15, name:'Buy off y puesta en marcha planta', start_day:s15, duration_days:d15,  pred:'14',            category:'test'},
-  ];
+  // Pass 2: compute start days
+  const starts = {};
+  const ends = {};
+  tpl.acts.forEach((a, i) => {
+    const id = i + 1;
+    const rule = a[1];
+    if (rule === 'end') {
+      starts[id] = D - durs[id];
+    } else if (rule.startsWith('fixed:')) {
+      starts[id] = parseInt(rule.split(':')[1]);
+    } else if (rule.startsWith('after:')) {
+      const pid = parseInt(rule.split(':')[1]);
+      starts[id] = (starts[pid]||0) + (durs[pid]||0);
+    } else if (rule.startsWith('afterMax:')) {
+      const pids = rule.split(':')[1].split(',').map(Number);
+      starts[id] = Math.max(...pids.map(p => (starts[p]||0) + (durs[p]||0)));
+    }
+    ends[id] = starts[id] + durs[id];
+  });
+
+  // Adjust: compress any activity that would overflow into the 'end' one
+  const lastId = n;
+  tpl.acts.forEach((a, i) => {
+    const id = i + 1;
+    if (id !== lastId && ends[id] > starts[lastId]) {
+      durs[id] = Math.max(1, starts[lastId] - starts[id]);
+      ends[id] = starts[id] + durs[id];
+    }
+  });
+
+  return tpl.acts.map((a, i) => ({
+    id: i+1, name: a[0],
+    start_day: starts[i+1], duration_days: durs[i+1],
+    pred: a[3], category: a[4], progress: 0
+  }));
 }
-const CAT_LABELS = { admin:'Administración', design:'Diseño', mech:'Mecánica/tooling', supply:'Suministros', control:'Control/visión/prog.', test:'Pruebas/entrega' };
+
+// ── MULTI-PROVIDER AI DISPATCHER ─────────────────────────────────────────
+async function callAI(prompt, pdfB64) {
+  const model = aiModel || PROVIDER_DEFAULTS[aiProvider].model;
+
+  if (aiProvider === 'anthropic') {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: model,
+        max_tokens: 3000,
+        messages: [{ role: 'user', content: [
+          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfB64 } },
+          { type: 'text', text: prompt }
+        ]}]
+      })
+    });
+    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error?.message || 'Anthropic API: ' + r.status); }
+    const d = await r.json();
+    return d.content.filter(b => b.type === 'text').map(b => b.text).join('');
+  }
+
+  if (aiProvider === 'gemini') {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [
+          { inline_data: { mime_type: 'application/pdf', data: pdfB64 } },
+          { text: prompt }
+        ]}]
+      })
+    });
+    if (!r.ok) {
+      const e = await r.json().catch(()=>({}));
+      let msg = e.error?.message || 'Gemini API: ' + r.status;
+      if (r.status === 404) msg += ' — El modelo "' + model + '" no existe o fue retirado. Abre la configuración de IA y usa "Detectar modelos disponibles".';
+      throw new Error(msg);
+    }
+    const d = await r.json();
+    return (d.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
+  }
+
+  if (aiProvider === 'openai') {
+    const r = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+      body: JSON.stringify({
+        model: model,
+        input: [{ role: 'user', content: [
+          { type: 'input_file', filename: 'cotizacion.pdf', file_data: 'data:application/pdf;base64,' + pdfB64 },
+          { type: 'input_text', text: prompt }
+        ]}]
+      })
+    });
+    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error?.message || 'OpenAI API: ' + r.status); }
+    const d = await r.json();
+    // Responses API: output array with message items containing content
+    let out = '';
+    (d.output || []).forEach(item => {
+      (item.content || []).forEach(c => { if (c.type === 'output_text') out += c.text; });
+    });
+    return out || (d.output_text || '');
+  }
+
+  throw new Error('Proveedor no soportado: ' + aiProvider);
+}
 
 async function analyzeQuote() {
   if (!apiKey) {
@@ -550,29 +864,7 @@ Responde ÚNICAMENTE con JSON válido sin texto adicional, sin markdown, sin blo
 }`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 3000,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } },
-            { type: 'text', text: prompt }
-          ]
-        }]
-      })
-    });
-
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error?.message || 'Error de API: ' + response.status);
-    }
-
-    const data = await response.json();
-    const raw = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+    const raw = await callAI(prompt, pdfBase64);
     let parsed;
     try { parsed = JSON.parse(raw.replace(/```json|```/g,'').trim()); }
     catch(e) { const m = raw.match(/\{[\s\S]*\}/); if(m) parsed = JSON.parse(m[0]); else throw new Error('Respuesta inesperada de la IA'); }
@@ -610,27 +902,45 @@ function renderTable() {
   body.innerHTML = '';
   document.getElementById('actCount').textContent = activities.length + ' actividades';
   setTimeout(renderGanttPreview, 0);
+  setTimeout(saveWork, 100);
   activities.forEach((act, i) => {
     const tr = document.createElement('tr');
     const catOpts = Object.entries(CAT_LABELS).map(([v,l]) => `<option value="${v}"${act.category===v?' selected':''}>${l}</option>`).join('');
     tr.innerHTML = `
-      <td style="color:var(--txt3);font-weight:600;font-size:11px">${act.id}</td>
-      <td>
-        <input value="${escHtml(act.name)}" oninput="activities[${i}].name=this.value;renderGanttPreview()" style="width:100%;min-width:120px;font-size:11px">
-        <div style="margin-top:2px">
-          <span class="cat-dot" style="background:${CAT_COLORS[act.category]||'#888'}"></span>
-          <select class="cat-sel" style="font-size:10px" onchange="activities[${i}].category=this.value;this.previousElementSibling.style.background=CAT_COLORS[this.value]||'#888';renderGanttPreview()">${catOpts}</select>
+      <td style="color:var(--txt3);font-weight:600;font-size:10px;padding:4px 2px">${act.id}</td>
+      <td style="padding:4px 3px">
+        <input value="${escHtml(act.name)}" oninput="activities[${i}].name=this.value;renderGanttPreview()" style="width:100%;min-width:110px;font-size:11px">
+        <div style="margin-top:1px;display:flex;align-items:center;gap:2px">
+          <span class="cat-dot" style="background:${CAT_COLORS[act.category]||'#888'};width:7px;height:7px"></span>
+          <select class="cat-sel" style="font-size:9px;max-width:110px" onchange="activities[${i}].category=this.value;this.previousElementSibling.style.background=CAT_COLORS[this.value]||'#888';renderGanttPreview()">${catOpts}</select>
         </div>
       </td>
-      <td><input type="number" min="0" value="${act.start_day}" oninput="activities[${i}].start_day=+this.value;recascade(${i});renderGanttPreview()" style="width:40px;text-align:center;font-size:11px"></td>
-      <td><input type="number" min="1" value="${act.duration_days}" oninput="activities[${i}].duration_days=+this.value;recascade(${i});renderGanttPreview()" style="width:40px;text-align:center;font-size:11px"></td>
-      <td><input value="${escHtml(act.pred||'')}" oninput="activities[${i}].pred=this.value;renderGanttPreview()" style="width:38px;text-align:center;font-size:11px"></td>
-      <td><button class="del-btn" onclick="deleteRow(${i})" title="Eliminar">×</button></td>`;
+      <td style="padding:4px 1px"><input type="number" min="0" value="${act.start_day}" oninput="activities[${i}].start_day=+this.value;recascade(${i});renderGanttPreview()" style="width:36px;text-align:center;font-size:11px"></td>
+      <td style="padding:4px 1px"><input type="number" min="1" value="${act.duration_days}" oninput="activities[${i}].duration_days=+this.value;recascade(${i});renderGanttPreview()" style="width:36px;text-align:center;font-size:11px"></td>
+      <td style="padding:4px 1px"><input value="${escHtml(act.pred||'')}" oninput="activities[${i}].pred=this.value;renderGanttPreview()" style="width:34px;text-align:center;font-size:10px"></td>
+      <td style="padding:4px 1px"><input type="number" min="0" max="100" step="5" value="${act.progress||0}" oninput="activities[${i}].progress=Math.min(100,Math.max(0,+this.value));renderGanttPreview()" style="width:34px;text-align:center;font-size:10px" title="% avance"></td>
+      <td style="white-space:nowrap;padding:4px 1px">
+        <button class="del-btn" onclick="duplicateRow(${i})" title="Duplicar" style="font-size:11px;padding:1px 3px">⧉</button><button class="del-btn" onclick="deleteRow(${i})" title="Eliminar" style="padding:1px 3px">×</button>
+      </td>`;
     body.appendChild(tr);
   });
 }
 
 function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function workDayToDate(dayNum) {
+  const v = document.getElementById('startDate').value;
+  const start = v ? new Date(v + 'T12:00:00') : new Date();
+  const d = new Date(start); let added = 0;
+  while (added < dayNum) {
+    d.setDate(d.getDate()+1);
+    if (isWorkDay(d)) added++;
+  }
+  return d;
+}
+function shortDate(d) {
+  return d.toLocaleDateString('es-MX', {day:'numeric', month:'short'});
+}
 
 // ── CASCADE RECALCULATION ─────────────────────────────────────────────────
 // When any duration or start_day changes, recalculate all downstream starts
@@ -715,6 +1025,28 @@ function recalcAll() {
 const CAT_HEX = { admin:'#888780', design:'#185FA5', mech:'#0F6E56', supply:'#BA7517', control:'#533AB7', test:'#993C1D' };
 const CAT_LBL = { admin:'Admin', design:'Diseño', mech:'Mecánica', supply:'Suministros', control:'Control/prog.', test:'Pruebas/entrega' };
 
+function validateTiming() {
+  // Returns array of warnings
+  const warns = [];
+  const W = parseInt(document.getElementById('totalWeeks').value) || 12;
+  const D = W * 5;
+  const idxById = {};
+  activities.forEach((a,i) => { idxById[a.id] = i; });
+  activities.forEach(a => {
+    const end = a.start_day + a.duration_days;
+    if (end > D) warns.push(`"${a.name}" termina el día ${end}, fuera del proyecto (${D}d)`);
+    if (a.pred) {
+      String(a.pred).split(',').map(p=>p.trim()).filter(Boolean).forEach(pid => {
+        const pi = idxById[parseInt(pid)];
+        if (pi === undefined) { warns.push(`"${a.name}" referencia predecesor ${pid} inexistente`); return; }
+        const pEnd = activities[pi].start_day + activities[pi].duration_days;
+        if (a.start_day < pEnd) warns.push(`"${a.name}" inicia (día ${a.start_day}) antes de que termine su predecesor ${pid} (día ${pEnd})`);
+      });
+    }
+  });
+  return warns;
+}
+
 function renderGanttPreview() {
   const card = document.getElementById('ganttPreviewCard');
   const wrap = document.getElementById('ganttSvgWrap');
@@ -753,7 +1085,7 @@ function renderGanttPreview() {
 
   function addWD(date, days) {
     const d = new Date(date); let a = 0;
-    while (a < days) { d.setDate(d.getDate()+1); if(d.getDay()!==0&&d.getDay()!==6) a++; }
+    while (a < days) { d.setDate(d.getDate()+1); if(isWorkDay(d)) a++; }
     return d;
   }
 
@@ -829,8 +1161,19 @@ function renderGanttPreview() {
 
     // Shadow
     svgParts.push(`<rect x="${(bx+0.5).toFixed(1)}" y="${(by+0.5).toFixed(1)}" width="${bw.toFixed(1)}" height="${BAR_H}" rx="3" fill="#D0CEC8"/>`);
-    // Bar fill
-    svgParts.push(`<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${BAR_H}" rx="3" fill="${col}"/>`);
+    // Bar fill with date tooltip
+    const dStart = shortDate(workDayToDate(act.start_day));
+    const dEnd = shortDate(workDayToDate(act.start_day + act.duration_days));
+    svgParts.push(`<rect class="gbar" data-i="${i}" data-mode="move" x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${BAR_H}" rx="3" fill="${col}" opacity="0.45" style="cursor:grab"><title>${escHtml(act.name)}: ${dStart} → ${dEnd} (${act.duration_days}d) · ${act.progress||0}% avance — arrastra para mover, borde derecho para estirar</title></rect>`);
+    // Progress overlay (solid portion)
+    const pw = bw * Math.min(100, act.progress||0) / 100;
+    if (pw > 0) {
+      svgParts.push(`<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${pw.toFixed(1)}" height="${BAR_H}" rx="3" fill="${col}" pointer-events="none"/>`);
+    } else {
+      svgParts.push(`<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${BAR_H}" rx="3" fill="${col}" opacity="0.55" pointer-events="none"/>`);
+    }
+    // Resize handle (right edge)
+    svgParts.push(`<rect class="gbar" data-i="${i}" data-mode="resize" x="${(bx+bw-4).toFixed(1)}" y="${by.toFixed(1)}" width="6" height="${BAR_H}" fill="transparent" style="cursor:ew-resize"/>`);
 
     // Duration label
     const durStr = act.duration_days + 'd';
@@ -849,7 +1192,7 @@ function renderGanttPreview() {
   const mcy = HEADER_H + (activities.length-1)*ROW_H + ROW_H/2;
   const dd = 7;
   svgParts.push(`<polygon points="${mx},${mcy-dd} ${mx+dd},${mcy} ${mx},${mcy+dd} ${mx-dd},${mcy}" fill="#E24B4A"/>`);
-  svgParts.push(`<text x="${mx+dd+2}" y="${mcy+3}" font-size="7.5" font-weight="700" fill="#993C1D">Envío</text>`);
+  svgParts.push(`<text x="${mx+dd+2}" y="${mcy+3}" font-size="7.5" font-weight="700" fill="#993C1D">${escHtml(projectData.milestone || "Envío")}</text>`);
 
   // Legend
   const LEG_Y = SVG_H - 18;
@@ -866,13 +1209,153 @@ function renderGanttPreview() {
   svgParts.push('</svg>');
 
   wrap.innerHTML = svgParts.join('');
-  document.getElementById('previewWeeksLabel').textContent = activities.length + ' actividades';
+
+  // ── DRAG & DROP wiring ──
+  const svgEl = wrap.querySelector('svg');
+  if (svgEl) {
+    const pxPerDay = CHART_W / totalDays;
+    let drag = null;
+
+    svgEl.querySelectorAll('.gbar').forEach(bar => {
+      bar.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        const i = +bar.getAttribute('data-i');
+        drag = {
+          i, mode: bar.getAttribute('data-mode'),
+          startX: e.clientX,
+          origStart: activities[i].start_day,
+          origDur: activities[i].duration_days,
+          svgRect: svgEl.getBoundingClientRect()
+        };
+        bar.setPointerCapture(e.pointerId);
+      });
+    });
+
+    svgEl.addEventListener('pointermove', e => {
+      if (!drag) return;
+      // Convert px delta to day delta using actual rendered scale
+      const scale = drag.svgRect.width / SVG_W;
+      const deltaDays = Math.round((e.clientX - drag.startX) / (pxPerDay * scale));
+      if (deltaDays === 0) return;
+      const act = activities[drag.i];
+      if (drag.mode === 'move') {
+        act.start_day = Math.max(0, drag.origStart + deltaDays);
+      } else {
+        act.duration_days = Math.max(1, drag.origDur + deltaDays);
+      }
+      recascade(drag.i);
+      // Live re-render (throttled by rAF)
+      if (!drag.raf) {
+        drag.raf = requestAnimationFrame(() => {
+          drag && (drag.raf = null);
+          renderGanttPreview();
+          // Note: re-render rebuilds SVG; pointer capture is lost, so drag ends.
+        });
+      }
+    });
+
+    svgEl.addEventListener('pointerup', () => {
+      if (drag) { renderTable(); drag = null; }
+    });
+    svgEl.addEventListener('pointercancel', () => { drag = null; });
+  }
+  const warns = validateTiming();
+  const lblEl = document.getElementById('previewWeeksLabel');
+  if (warns.length) {
+    lblEl.innerHTML = `<span style="color:#BA7517;cursor:help" title="${escHtml(warns.join('\n'))}">⚠ ${warns.length} advertencia${warns.length>1?'s':''}</span> · ${activities.length} actividades`;
+  } else {
+    lblEl.textContent = activities.length + ' actividades';
+  }
   const iw = document.getElementById('weeksEditInline');
   if (iw && iw.value != W) iw.value = W;
 }
 function addRow() {
   const maxId = activities.reduce((m,a)=>Math.max(m,a.id),0);
   activities.push({id:maxId+1,name:'Nueva actividad',start_day:0,duration_days:5,pred:'',category:'mech'});
+  renderTable();
+}
+
+function exportExcel() {
+  if (typeof XLSX === 'undefined') { alert('La librería Excel no cargó. Verifica tu conexión.'); return; }
+  const rows = activities.map(a => ({
+    'ID': a.id,
+    'Actividad': a.name,
+    'Día inicio': a.start_day,
+    'Duración (días)': a.duration_days,
+    'Fecha inicio': shortDate(workDayToDate(a.start_day)) + ' ' + workDayToDate(a.start_day).getFullYear(),
+    'Fecha fin': shortDate(workDayToDate(a.start_day + a.duration_days)) + ' ' + workDayToDate(a.start_day + a.duration_days).getFullYear(),
+    'Predecesores': a.pred || '',
+    'Categoría': (CAT_LABELS[a.category]||a.category),
+    '% Avance': (a.progress||0) + '%'
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:4},{wch:38},{wch:9},{wch:13},{wch:14},{wch:14},{wch:14},{wch:20},{wch:9}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Timing');
+  // Project info sheet
+  const info = [
+    ['Proyecto', projectData.title||''],
+    ['Cliente', projectData.client||''],
+    ['Cotización', projectData.quote_number||''],
+    ['Semanas', projectData.weeks||''],
+    ['Inicio', document.getElementById('startDate').value||''],
+  ];
+  const ws2 = XLSX.utils.aoa_to_sheet(info);
+  ws2['!cols'] = [{wch:14},{wch:50}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Proyecto');
+  XLSX.writeFile(wb, 'Timing_' + ((projectData.quote_number||'ADV').replace(/[^a-zA-Z0-9-]/g,'-')) + '.xlsx');
+}
+
+function exportJSON() {
+  const data = {
+    version: 1,
+    projectData,
+    activities,
+    startDate: document.getElementById('startDate').value
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Timing_' + ((projectData.quote_number||'config').replace(/[^a-zA-Z0-9-]/g,'-')) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importJSON(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.activities || !data.projectData) throw new Error('Formato inválido');
+      projectData = data.projectData;
+      activities = data.activities;
+      if (data.startDate) document.getElementById('startDate').value = data.startDate;
+      const W = parseInt(projectData.weeks) || 12;
+      document.getElementById('totalWeeks').value = W;
+      const iw = document.getElementById('weeksEditInline'); if (iw) iw.value = W;
+      document.getElementById('previewTitle').textContent = projectData.title || '';
+      document.getElementById('previewSub').textContent = projectData.subtitle || '';
+      document.getElementById('pCliente').textContent = projectData.client || '';
+      document.getElementById('pQuote').textContent = projectData.quote_number || '';
+      document.getElementById('pWeeks').textContent = W + ' sem.';
+      renderTable();
+      setStatus('success', 'Configuración importada correctamente.');
+    } catch(err) {
+      setStatus('error', 'Error al importar: ' + err.message);
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function duplicateRow(i) {
+  const src = activities[i];
+  const copy = {...src, id: 0, name: src.name + ' (copia)'};
+  activities.splice(i+1, 0, copy);
+  // Renumber all
+  activities.forEach((a, idx) => { a.id = idx + 1; });
   renderTable();
 }
 function deleteRow(i) {
@@ -1000,7 +1483,14 @@ function generatePDF() {
     const CHART_X = ML + LABEL_W;
     const CHART_W = PW - CHART_X - MR;
     const N = activities.length;
-    const ROW_H = (GANTT_BOT - ROW_AREA_TOP) / N;
+    // Dynamic scale: with many activities shrink rows but keep min 6mm readable.
+    // If even 6mm doesn't fit, the chart still renders (rows get tight) and we
+    // add a note recommending Excel export for very long lists.
+    const ROW_H_raw = (GANTT_BOT - ROW_AREA_TOP) / N;
+    const ROW_H = ROW_H_raw;
+    if (N > 22) {
+      console.warn('Más de 22 actividades: el PDF comprimirá las filas. Considera exportar a Excel.');
+    }
     const BAR_H = ROW_H * 0.55;
 
     function dayX(d) { return CHART_X + (Math.min(d, totalDays) / totalDays) * CHART_W; }
@@ -1088,8 +1578,18 @@ function generatePDF() {
 
       // Shadow
       setFill([208,206,200]); doc.roundedRect(bx+0.4, by+0.4, bw, BAR_H, 0.8, 0.8, 'F');
-      // Bar
-      setFill(catColor); doc.roundedRect(bx, by, bw, BAR_H, 0.8, 0.8, 'F');
+      // Bar — lighter if has progress info, then solid overlay for % done
+      const prog = Math.min(100, act.progress||0);
+      if (prog > 0 && prog < 100) {
+        // Light full bar
+        doc.setGState(new doc.GState({opacity: 0.45}));
+        setFill(catColor); doc.roundedRect(bx, by, bw, BAR_H, 0.8, 0.8, 'F');
+        doc.setGState(new doc.GState({opacity: 1}));
+        // Solid progress portion
+        setFill(catColor); doc.roundedRect(bx, by, bw*prog/100, BAR_H, 0.8, 0.8, 'F');
+      } else {
+        setFill(catColor); doc.roundedRect(bx, by, bw, BAR_H, 0.8, 0.8, 'F');
+      }
 
       // Duration label
       const durStr = act.duration_days + 'd';
@@ -1114,7 +1614,7 @@ function generatePDF() {
     doc.triangle(mx, mcy-d, mx+d, mcy, mx, mcy+d, 'F');
     doc.triangle(mx, mcy-d, mx-d, mcy, mx, mcy+d, 'F');
     setTxt(C.txt); doc.setFont('helvetica','bold'); doc.setFontSize(5.5);
-    doc.text('Envío SMP', mx+d+0.8, mcy+0.8);
+    doc.text(projectData.milestone || 'Envío', mx+d+0.8, mcy+0.8);
 
     // Borders
     setStroke(C.border2); doc.setLineWidth(0.3);
@@ -1134,6 +1634,10 @@ function generatePDF() {
     });
 
     // Note
+    if (N > 22) {
+      setTxt(C.coral); doc.setFontSize(5.5); doc.setFont('helvetica','bold');
+      doc.text('⚠ ' + N + ' actividades — para mayor legibilidad usa la exportación a Excel', ML, LEG_Y - 2);
+    }
     setTxt(C.txt3); doc.setFontSize(5.5); doc.setFont('helvetica','italic');
     doc.text('* Días laborables lun–vie · Inicio: '+formatDate(startDate)+' · Generado con ADV Timing Generator', PW-MR, LEG_Y+3, {align:'right'});
 
@@ -1162,8 +1666,7 @@ function addWorkDays(date, days) {
   let added = 0;
   while (added < days) {
     d.setDate(d.getDate()+1);
-    const dow = d.getDay();
-    if (dow!==0 && dow!==6) added++;
+    if (isWorkDay(d)) added++;
   }
   return d;
 }
@@ -1212,7 +1715,8 @@ function startManual() {
     grand_total_usd: '',
     weeks:       W
   };
-  activities = buildActivities(W);
+  currentTemplate = document.getElementById('m_template').value || 'estandar';
+  activities = buildActivities(W, currentTemplate);
   document.getElementById('step1b').style.display = 'none';
   document.getElementById('step2').style.display = 'block';
   document.getElementById('previewTitle').textContent = projectData.title;
@@ -1229,7 +1733,57 @@ function startManual() {
   setStatus('success', 'Timing manual generado con ' + activities.length + ' actividades. Ajusta los valores y genera el PDF.');
 }
 
+// ── AUTOSAVE: persist work in localStorage ────────────────────────────────
+function saveWork() {
+  try {
+    localStorage.setItem('adv_timing_work', JSON.stringify({
+      projectData, activities,
+      startDate: document.getElementById('startDate').value,
+      ts: Date.now()
+    }));
+  } catch(e) {}
+}
+
+function restoreWork() {
+  try {
+    const saved = localStorage.getItem('adv_timing_work');
+    if (!saved) return false;
+    const data = JSON.parse(saved);
+    if (!data.activities || !data.activities.length) return false;
+    // Only restore if less than 7 days old
+    if (Date.now() - (data.ts||0) > 7*24*3600*1000) return false;
+    projectData = data.projectData || {};
+    activities = data.activities;
+    if (data.startDate) document.getElementById('startDate').value = data.startDate;
+    return true;
+  } catch(e) { return false; }
+}
+
+function clearWork() {
+  try { localStorage.removeItem('adv_timing_work'); } catch(e) {}
+}
+
+function resumeWork() {
+  if (!restoreWork()) return;
+  const W = parseInt(projectData.weeks) || 12;
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('step2').style.display = 'block';
+  document.getElementById('previewTitle').textContent = projectData.title || 'Proyecto restaurado';
+  document.getElementById('previewSub').textContent = projectData.subtitle || '';
+  document.getElementById('pCliente').textContent = projectData.client || '—';
+  document.getElementById('pQuote').textContent = projectData.quote_number || '—';
+  document.getElementById('pWeeks').textContent = W + ' sem.';
+  document.getElementById('totalWeeks').value = W;
+  const iw = document.getElementById('weeksEditInline'); if (iw) iw.value = W;
+  document.getElementById('projectInfoCard').style.display = 'block';
+  renderTable();
+  document.getElementById('splitPanel').style.display = 'block';
+  document.getElementById('generateBtnRow').style.display = 'flex';
+  setStatus('success', 'Trabajo anterior restaurado. Continúa donde lo dejaste.');
+}
+
 function resetApp() {
+  clearWork();
   pdfBase64 = ''; projectData = {}; activities = [];
   document.getElementById('step1').style.display = 'block';
   document.getElementById('step1b').style.display = 'none';
