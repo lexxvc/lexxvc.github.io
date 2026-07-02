@@ -230,10 +230,15 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Crear timing manual
       </button>
-      <button class="btn-secondary" id="resumeBtn" onclick="resumeWork()" style="display:none">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-        Continuar trabajo anterior
-      </button>
+    </div>
+
+    <!-- BIBLIOTECA DE PROYECTOS -->
+    <div class="card" id="libraryCard" style="display:none;margin-top:14px">
+      <div class="card-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        Mis proyectos
+      </div>
+      <div id="libraryList"></div>
     </div>
   </div>
 
@@ -284,6 +289,10 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
         <div class="meta-field">
           <label>Fecha de inicio</label>
           <input type="date" id="m_startdate">
+        </div>
+        <div class="meta-field" style="grid-column:1/-1">
+          <label>🎯 Fecha de entrega objetivo (opcional — calcula las semanas hacia atrás)</label>
+          <input type="date" id="m_targetdate">
         </div>
       </div>
     </div>
@@ -370,7 +379,35 @@ select.cat-sel:focus{outline:none;background:var(--bg)}
       </div>
     </div>
 
+    <!-- PAROS DE PLANTA -->
+    <div class="card" id="shutdownsCard" style="margin-top:12px;margin-bottom:12px">
+      <div class="card-title" style="justify-content:space-between">
+        <span style="display:flex;align-items:center;gap:7px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+          Paros de planta / periodos no laborables
+        </span>
+        <span style="font-size:11px;color:var(--txt3);font-weight:400;text-transform:none;letter-spacing:0">Se excluyen del calendario (mueven la fecha de entrega, no las barras)</span>
+      </div>
+      <div id="shutdownsList" style="margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+        <div class="meta-field"><label>Desde</label><input type="date" id="shFrom" style="width:150px"></div>
+        <div class="meta-field"><label>Hasta</label><input type="date" id="shTo" style="width:150px"></div>
+        <div class="meta-field"><label>Motivo (opcional)</label><input type="text" id="shLabel" placeholder="Ej: Paro de verano VW" style="width:200px"></div>
+        <button class="btn-secondary" style="padding:8px 14px" onclick="addShutdown()">+ Agregar</button>
+      </div>
+    </div>
+
     <div class="btn-row" id="generateBtnRow" style="display:none">
+      <button class="btn-secondary" id="baselineBtn" onclick="freezeBaseline()" title="Congela el plan actual como línea base para comparar avance">
+        📌 <span id="baselineBtnLabel">Congelar línea base</span>
+      </button>
+      <button class="btn-secondary" id="trackingBtn" onclick="generatePDF(true)" style="display:none" title="PDF con comparación plan vs avance real">
+        📊 Reporte de seguimiento
+      </button>
+      <select id="pdfLang" style="padding:9px 10px;border:0.5px solid var(--border2);border-radius:var(--radius-sm);font-size:12px;background:var(--card);color:var(--txt);font-family:inherit" title="Idioma del PDF">
+        <option value="es">🇲🇽 PDF en Español</option>
+        <option value="en">🇺🇸 PDF in English</option>
+      </select>
       <button class="btn-primary" id="generateBtn" onclick="generatePDF()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Generar y descargar PDF
@@ -431,7 +468,13 @@ const MX_HOLIDAYS = new Set([
 function isWorkDay(d) {
   if (d.getDay()===0 || d.getDay()===6) return false;
   const iso = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  return !MX_HOLIDAYS.has(iso);
+  if (MX_HOLIDAYS.has(iso)) return false;
+  // Paros de planta configurados por proyecto
+  const sh = (typeof projectData !== 'undefined' && projectData && projectData.shutdowns) || [];
+  for (const r of sh) {
+    if (r.from && r.to && iso >= r.from && iso <= r.to) return false;
+  }
+  return true;
 }
 
 const PROVIDER_DEFAULTS = {
@@ -577,16 +620,25 @@ function saveApiKey() {
 
 updateApiIndicator();
 // Don't block app load — manual mode works without API key
-// Show resume button if there's saved work
+// Render project library on load (also migrate legacy single-slot save)
 try {
-  const saved = localStorage.getItem('adv_timing_work');
-  if (saved) {
-    const data = JSON.parse(saved);
-    if (data.activities && data.activities.length && Date.now()-(data.ts||0) < 7*24*3600*1000) {
-      document.getElementById('resumeBtn').style.display = 'inline-flex';
+  const legacy = localStorage.getItem('adv_timing_work');
+  if (legacy) {
+    const data = JSON.parse(legacy);
+    if (data.activities && data.activities.length) {
+      const lib = getLibrary();
+      const id = 'p_legacy';
+      if (!lib[id]) {
+        data.projectData = data.projectData || {};
+        data.projectData.id = id;
+        lib[id] = data;
+        setLibrary(lib);
+      }
     }
+    localStorage.removeItem('adv_timing_work');
   }
 } catch(e) {}
+renderLibrary();
 
 // ── FILE HANDLING ────────────────────────────────────────────────────────
 let pdfBase64 = '';
@@ -878,16 +930,7 @@ Responde ÚNICAMENTE con JSON válido sin texto adicional, sin markdown, sin blo
     document.getElementById('pCliente').textContent = projectData.client;
     document.getElementById('pQuote').textContent = projectData.quote_number;
 
-    // Weeks: AI-detected value is the single source of truth
-    document.getElementById('totalWeeks').value = W;
-    document.getElementById('pWeeks').textContent = W + ' sem.';
-    const inlineW = document.getElementById('weeksEditInline'); if (inlineW) inlineW.value = W;
-    document.getElementById('projectInfoCard').style.display = 'block';
-
-    renderTable();
-    document.getElementById('splitPanel').style.display = 'block';
-    document.getElementById('generateBtnRow').style.display = 'flex';
-    setStatus('success', activities.length + ' actividades detectadas. Revisa y ajusta antes de generar el PDF.');
+    enterEditMode(activities.length + ' actividades detectadas. Revisa y ajusta antes de generar el PDF.');
 
   } catch(err) {
     setStatus('error', 'Error: ' + err.message);
@@ -940,6 +983,143 @@ function workDayToDate(dayNum) {
 }
 function shortDate(d) {
   return d.toLocaleDateString('es-MX', {day:'numeric', month:'short'});
+}
+// ── TRADUCCIÓN PDF (ES/EN) ───────────────────────────────────────────────
+const I18N = {
+  en: {
+    // Encabezados PDF
+    'Actividad':'Activity', 'Pred.':'Pred.', 'Inicio':'Start',
+    'Entrega estimada':'Est. delivery', 'Actividades':'Activities',
+    'Ejecución':'Execution', 'Responsable':'Responsible',
+    'semanas':'weeks', 'sem.':'wks',
+    'Cot: ':'Quote: ', 'Cliente: ':'Client: ', 'Fecha: ':'Date: ', 'Ejecución: ':'Execution: ',
+    'Envío':'Shipment', 'Envío SMP':'Shipment SMP',
+    'REPORTE DE SEGUIMIENTO — ADV MECHANICS':'PROGRESS REPORT — ADV MECHANICS',
+    // Leyenda
+    'Administración':'Administration', 'Diseño':'Design', 'Mecánica/tooling':'Mechanical/tooling',
+    'Suministros':'Procurement', 'Control/visión/prog.':'Controls/vision/prog.', 'Pruebas/entrega':'Testing/delivery',
+    // Actividades estándar (las 3 plantillas)
+    'Recepción de OC':'PO reception',
+    'Diseño de estación y toolings':'Station & tooling design',
+    'Liberación de diseño':'Design release',
+    'Recepción de piezas':'Parts reception',
+    'Desarrollo y armado estructura':'Frame development & assembly',
+    'Desarrollo y maquinado tooling':'Tooling development & machining',
+    'Suministro componentes eléctricos':'Electrical components procurement',
+    'Suministro componentes neumáticos':'Pneumatic components procurement',
+    'Desarrollo gabinete de control':'Control cabinet development',
+    'Integración equipo neumático':'Pneumatic equipment integration',
+    'Integración mecánica estación':'Station mechanical integration',
+    'Integración sensores y visión':'Sensors & vision integration',
+    'Desarrollo programación PLC y HMI':'PLC & HMI programming',
+    'Pruebas internas y ajustes':'Internal testing & adjustments',
+    'Buy off y puesta en marcha planta':'Buy-off & plant commissioning',
+    // Plantilla EOL
+    'Diseño de estación EOL':'EOL station design',
+    'Suministro sensores y visión':'Sensors & vision procurement',
+    'Armado de estructura y tooling':'Frame & tooling assembly',
+    'Gabinete de control y cableado':'Control cabinet & wiring',
+    'Integración neumática':'Pneumatic integration',
+    'Integración sensores/visión/scanner':'Sensors/vision/scanner integration',
+    'Programación PLC, HMI y trazabilidad':'PLC, HMI & traceability programming',
+    'Pruebas funcionales por variante':'Functional tests per variant',
+    // Plantilla Retrofit
+    'Levantamiento y diagnóstico':'Survey & diagnosis',
+    'Ingeniería de modificación':'Modification engineering',
+    'Suministro de componentes':'Components procurement',
+    'Desmontaje y preparación':'Disassembly & preparation',
+    'Modificación mecánica':'Mechanical modification',
+    'Modificación eléctrica y control':'Electrical & controls modification',
+    'Actualización programación PLC/HMI':'PLC/HMI programming update',
+    'Pruebas y validación':'Testing & validation',
+    'Buy off y arranque':'Buy-off & startup',
+    // Notas
+    'Días laborables lun–vie':'Working days Mon–Fri',
+    'Inicio:':'Start:',
+    'Generado con ADV Timing Generator':'Generated with ADV Timing Generator',
+  }
+};
+
+function t(str) {
+  const lang = (document.getElementById('pdfLang')||{}).value || 'es';
+  if (lang === 'es') return str;
+  return (I18N.en[str] !== undefined) ? I18N.en[str] : str;
+}
+
+// ── LÍNEA BASE (plan congelado para seguimiento) ─────────────────────────
+function freezeBaseline() {
+  if (projectData.baseline) {
+    if (!confirm('Ya existe una línea base congelada el ' + (projectData.baseline.date||'') + '. ¿Reemplazarla con el plan actual?')) return;
+  }
+  projectData.baseline = {
+    date: new Date().toLocaleDateString('es-MX'),
+    activities: JSON.parse(JSON.stringify(activities.map(a => ({id:a.id, name:a.name, start_day:a.start_day, duration_days:a.duration_days}))))
+  };
+  saveWork();
+  updateBaselineUI();
+  renderGanttPreview();
+  setStatus('success', 'Línea base congelada. Las barras grises del Gantt muestran el plan original; ahora puedes ajustar fechas reales y registrar % de avance.');
+}
+
+function updateBaselineUI() {
+  const btn = document.getElementById('baselineBtnLabel');
+  const track = document.getElementById('trackingBtn');
+  if (!btn) return;
+  if (projectData && projectData.baseline) {
+    btn.textContent = 'Línea base: ' + projectData.baseline.date;
+    if (track) track.style.display = 'inline-flex';
+  } else {
+    btn.textContent = 'Congelar línea base';
+    if (track) track.style.display = 'none';
+  }
+}
+
+// ── PAROS DE PLANTA ──────────────────────────────────────────────────────
+function addShutdown() {
+  const from = document.getElementById('shFrom').value;
+  const to = document.getElementById('shTo').value;
+  const label = document.getElementById('shLabel').value.trim();
+  if (!from || !to) { alert('Indica las fechas Desde y Hasta.'); return; }
+  if (to < from) { alert('La fecha Hasta debe ser posterior a Desde.'); return; }
+  if (!projectData.shutdowns) projectData.shutdowns = [];
+  projectData.shutdowns.push({from, to, label});
+  document.getElementById('shFrom').value = '';
+  document.getElementById('shTo').value = '';
+  document.getElementById('shLabel').value = '';
+  renderShutdowns();
+  renderTable(); // recalcula fechas mostradas y guarda
+}
+
+function removeShutdown(i) {
+  projectData.shutdowns.splice(i, 1);
+  renderShutdowns();
+  renderTable();
+}
+
+function renderShutdowns() {
+  const wrap = document.getElementById('shutdownsList');
+  if (!wrap) return;
+  const sh = (projectData && projectData.shutdowns) || [];
+  if (!sh.length) { wrap.innerHTML = '<div style="font-size:12px;color:var(--txt3);padding:4px 0">Sin paros configurados. Los feriados oficiales de México ya están incluidos.</div>'; return; }
+  wrap.innerHTML = sh.map((r, i) => {
+    const f = new Date(r.from+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'});
+    const t = new Date(r.to+'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'});
+    return `<div style="display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:0.5px solid var(--border2);border-radius:20px;padding:4px 6px 4px 12px;margin:0 6px 6px 0;font-size:12px">
+      <span style="color:var(--coral)">⛔</span>
+      <span>${f} → ${t}</span>
+      ${r.label ? `<span style="color:var(--txt3)">· ${escHtml(r.label)}</span>` : ''}
+      <button class="del-btn" onclick="removeShutdown(${i})" style="padding:0 4px">×</button>
+    </div>`;
+  }).join('');
+}
+
+function countWorkDays(from, to) {
+  let n = 0; const d = new Date(from);
+  while (d < to) {
+    d.setDate(d.getDate()+1);
+    if (isWorkDay(d)) n++;
+  }
+  return n;
 }
 
 // ── CASCADE RECALCULATION ─────────────────────────────────────────────────
@@ -1151,6 +1331,16 @@ function renderGanttPreview() {
     svgParts.push(`<text x="4" y="${(ry+ROW_H/2+3).toFixed(1)}" font-size="9.5" fill="#1A1A18">${escHtml(lbl)}</text>`);
     if (act.pred) {
       svgParts.push(`<text x="${LABEL_W-3}" y="${(ry+ROW_H/2+3).toFixed(1)}" text-anchor="end" font-size="7.5" fill="#8A8880">${escHtml(String(act.pred))}</text>`);
+    }
+
+    // Baseline ghost bar (plan original) — outline behind current bar
+    if (projectData && projectData.baseline) {
+      const bAct = projectData.baseline.activities.find(b => b.id === act.id);
+      if (bAct) {
+        const gbx = dx(bAct.start_day);
+        const gbw = Math.max(dx(bAct.start_day + bAct.duration_days) - gbx, 2);
+        svgParts.push(`<rect x="${gbx.toFixed(1)}" y="${(ry + ROW_H - 8).toFixed(1)}" width="${gbw.toFixed(1)}" height="4" rx="2" fill="#9A9A94" opacity="0.55"><title>Plan base: día ${bAct.start_day} → ${bAct.start_day+bAct.duration_days}</title></rect>`);
+      }
     }
 
     // Bar
@@ -1374,7 +1564,7 @@ function deleteRow(i) {
 }
 
 // ── GENERATE PDF ─────────────────────────────────────────────────────────
-function generatePDF() {
+function generatePDF(withBaseline) {
   const { jsPDF } = window.jspdf;
   if (!jsPDF) { alert('La librería de PDF no cargó. Verifica tu conexión a internet.'); return; }
 
@@ -1429,7 +1619,7 @@ function generatePDF() {
 
     // Title
     setTxt(C.white); doc.setFont('helvetica','bold'); doc.setFontSize(9);
-    doc.text('ADV MECHANICS S.A. DE C.V.', ML+19, MT+6.5);
+    doc.text(withBaseline ? t('REPORTE DE SEGUIMIENTO — ADV MECHANICS') : 'ADV MECHANICS S.A. DE C.V.', ML+19, MT+6.5);
     setTxt([141,164,200]); doc.setFont('helvetica','normal'); doc.setFontSize(6.5);
     const titleStr = (projectData.title||'').substring(0,55);
     const subStr = (projectData.subtitle||'').substring(0,65);
@@ -1440,10 +1630,10 @@ function generatePDF() {
     const rx = PW-MR-2;
     const leftBound = PW/2 + 10;
     setTxt([141,164,200]); doc.setFontSize(6.5);
-    const qStr = 'Cot: ' + (projectData.quote_number||'');
-    const clStr = 'Cliente: ' + (projectData.client||'').substring(0,20);
-    const fStr = 'Fecha: ' + (projectData.quote_date||'');
-    const ejStr = 'Ejecución: ' + (projectData.weeks||totalWeeks) + ' sem.';
+    const qStr = t('Cot: ') + (projectData.quote_number||'');
+    const clStr = t('Cliente: ') + (projectData.client||'').substring(0,20);
+    const fStr = t('Fecha: ') + (projectData.quote_date||'');
+    const ejStr = t('Ejecución: ') + (projectData.weeks||totalWeeks) + ' ' + t('sem.');
     doc.text(qStr, rx, MT+5.5, {align:'right'});
     doc.text(clStr, rx, MT+9.5, {align:'right'});
     doc.text(fStr, rx, MT+13.5, {align:'right'});
@@ -1457,11 +1647,11 @@ function generatePDF() {
     doc.rect(ML, INFO_Y, PW-ML-MR, INFO_H, 'S');
 
     const stats = [
-      ['Inicio', formatDate(startDate)],
-      ['Entrega estimada', formatDate(addWorkDays(startDate, totalDays))],
-      ['Actividades', String(activities.length)],
-      ['Ejecución', (projectData.weeks||totalWeeks) + ' semanas'],
-      ['Responsable', 'ADV Mechanics'],
+      [t('Inicio'), formatDate(startDate)],
+      [t('Entrega estimada'), formatDate(addWorkDays(startDate, totalDays))],
+      [t('Actividades'), String(activities.length)],
+      [t('Ejecución'), (projectData.weeks||totalWeeks) + ' ' + t('semanas')],
+      [t('Responsable'), 'ADV Mechanics'],
     ];
     const sw = (PW-ML-MR) / stats.length;
     stats.forEach(([lbl,val], k) => {
@@ -1514,9 +1704,9 @@ function generatePDF() {
     setFill([232,236,245]); doc.rect(ML, HDR_TOP, LABEL_W, MONTH_H, 'F');
     setFill([240,239,232]); doc.rect(ML, HDR_TOP+MONTH_H, LABEL_W, WK_H, 'F');
     setTxt(C.txt); doc.setFont('helvetica','bold'); doc.setFontSize(5.5);
-    doc.text('Actividad', ML+LABEL_W/2, HDR_TOP+MONTH_H*0.65, {align:'center'});
+    doc.text(t('Actividad'), ML+LABEL_W/2, HDR_TOP+MONTH_H*0.65, {align:'center'});
     setTxt(C.txt3); doc.setFont('helvetica','normal'); doc.setFontSize(5);
-    doc.text('Pred.', ML+LABEL_W-1, HDR_TOP+MONTH_H+WK_H*0.65, {align:'right'});
+    doc.text(t('Pred.'), ML+LABEL_W-1, HDR_TOP+MONTH_H+WK_H*0.65, {align:'right'});
 
     // Month labels
     const months = getMonthRanges(startDate, totalWeeks);
@@ -1555,7 +1745,7 @@ function generatePDF() {
       // Task label — strict truncation to fit LABEL_W
       setTxt(C.txt); doc.setFont('helvetica','normal'); doc.setFontSize(6);
       const labelY = ry + ROW_H/2 + 1;
-      let lbl = act.name;
+      let lbl = t(act.name);
       // Truncate to fit available width (LABEL_W minus pred space minus margins)
       const predW = act.pred ? (doc.setFontSize(5), doc.getTextWidth(String(act.pred)) + 3) : 0;
       doc.setFontSize(6);
@@ -1576,6 +1766,18 @@ function generatePDF() {
       const by = ry + (ROW_H-BAR_H)/2;
       const catColor = CAT_RGB[act.category] || C.gray;
 
+      // Baseline ghost (reporte de seguimiento)
+      if (withBaseline && projectData.baseline) {
+        const bAct = projectData.baseline.activities.find(b => b.id === act.id);
+        if (bAct) {
+          const gbx = dayX(bAct.start_day);
+          const gbw = Math.max(dayX(bAct.start_day + bAct.duration_days) - gbx, 1);
+          setFill([154,154,148]);
+          doc.setGState(new doc.GState({opacity: 0.5}));
+          doc.roundedRect(gbx, ry + ROW_H - 2.2, gbw, 1.4, 0.5, 0.5, 'F');
+          doc.setGState(new doc.GState({opacity: 1}));
+        }
+      }
       // Shadow
       setFill([208,206,200]); doc.roundedRect(bx+0.4, by+0.4, bw, BAR_H, 0.8, 0.8, 'F');
       // Bar — lighter if has progress info, then solid overlay for % done
@@ -1614,7 +1816,7 @@ function generatePDF() {
     doc.triangle(mx, mcy-d, mx+d, mcy, mx, mcy+d, 'F');
     doc.triangle(mx, mcy-d, mx-d, mcy, mx, mcy+d, 'F');
     setTxt(C.txt); doc.setFont('helvetica','bold'); doc.setFontSize(5.5);
-    doc.text(projectData.milestone || 'Envío', mx+d+0.8, mcy+0.8);
+    doc.text(t(projectData.milestone || 'Envío'), mx+d+0.8, mcy+0.8);
 
     // Borders
     setStroke(C.border2); doc.setLineWidth(0.3);
@@ -1630,7 +1832,7 @@ function generatePDF() {
       setFill(CAT_RGB[cat]||C.gray);
       doc.roundedRect(lx+1, LEG_Y, 5, 3.5, 0.5, 0.5, 'F');
       setTxt(C.txt2); doc.setFont('helvetica','normal'); doc.setFontSize(6);
-      doc.text(lbl, lx+7.5, LEG_Y+3);
+      doc.text(t(lbl), lx+7.5, LEG_Y+3);
     });
 
     // Note
@@ -1638,11 +1840,17 @@ function generatePDF() {
       setTxt(C.coral); doc.setFontSize(5.5); doc.setFont('helvetica','bold');
       doc.text('⚠ ' + N + ' actividades — para mayor legibilidad usa la exportación a Excel', ML, LEG_Y - 2);
     }
+    if (withBaseline && projectData.baseline) {
+      setTxt(C.txt2); doc.setFontSize(5.5); doc.setFont('helvetica','normal');
+      doc.text('▬ línea gris = plan base (' + projectData.baseline.date + ') · barra sólida = % avance real · Corte: ' + new Date().toLocaleDateString('es-MX'), ML, LEG_Y - 2);
+    }
     setTxt(C.txt3); doc.setFontSize(5.5); doc.setFont('helvetica','italic');
-    doc.text('* Días laborables lun–vie · Inicio: '+formatDate(startDate)+' · Generado con ADV Timing Generator', PW-MR, LEG_Y+3, {align:'right'});
+    doc.text('* ' + t('Días laborables lun–vie') + ' · ' + t('Inicio:') + ' ' + formatDate(startDate) + ' · ' + t('Generado con ADV Timing Generator'), PW-MR, LEG_Y+3, {align:'right'});
 
     // ── SAVE ──
-    const filename = 'Timing_' + (projectData.quote_number||'ADV').replace(/[^a-zA-Z0-9-]/g,'-') + '.pdf';
+    const base = (projectData.quote_number||'ADV').replace(/[^a-zA-Z0-9-]/g,'-');
+    const today = new Date().toISOString().split('T')[0];
+    const filename = withBaseline ? ('Seguimiento_' + base + '_' + today + '.pdf') : ('Timing_' + base + '.pdf');
     doc.save(filename);
 
     document.getElementById('step2').style.display = 'none';
@@ -1658,7 +1866,8 @@ function generatePDF() {
 // ── HELPERS ──────────────────────────────────────────────────────────────
 function formatDate(d) {
   if (!d) return '—';
-  return d.toLocaleDateString('es-MX', {day:'2-digit',month:'short',year:'numeric'});
+  const lang = (document.getElementById('pdfLang')||{}).value || 'es';
+  return d.toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', {day:'2-digit',month:'short',year:'numeric'});
 }
 
 function addWorkDays(date, days) {
@@ -1675,9 +1884,10 @@ function getMonthRanges(startDate, totalWeeks) {
   const months = [];
   let currentMonth = '';
   let startWk = 0;
+  const _loc = ((document.getElementById('pdfLang')||{}).value === 'en') ? 'en-US' : 'es-MX';
   for (let w=0; w<=totalWeeks; w++) {
     const d = addWorkDays(startDate, w*5);
-    const mLabel = d.toLocaleDateString('es-MX',{month:'long',year:'numeric'});
+    const mLabel = d.toLocaleDateString(_loc,{month:'long',year:'numeric'});
     if (mLabel !== currentMonth) {
       if (currentMonth) months.push({label:cap(currentMonth), startWk, endWk:w});
       currentMonth = mLabel; startWk = w;
@@ -1700,7 +1910,20 @@ function openManualMode() {
 function startManual() {
   const title = document.getElementById('m_title').value.trim();
   const client = document.getElementById('m_client').value.trim();
-  const W = parseInt(document.getElementById('m_weeks').value) || 12;
+  let W = parseInt(document.getElementById('m_weeks').value) || 12;
+  // Modo entrega objetivo: si hay fecha objetivo, calcular semanas hacia atrás
+  const targetVal = document.getElementById('m_targetdate').value;
+  const startVal = document.getElementById('m_startdate').value;
+  if (targetVal && startVal) {
+    const wd = countWorkDays(new Date(startVal+'T12:00:00'), new Date(targetVal+'T12:00:00'));
+    const targetW = Math.floor(wd / 5);
+    if (targetW < 4) {
+      alert('⚠ Entre el inicio y la fecha objetivo solo hay ' + wd + ' días laborables (' + targetW + ' semanas). El mínimo viable es 4 semanas. Ajusta las fechas.');
+      return;
+    }
+    W = targetW;
+    document.getElementById('m_weeks').value = W;
+  }
   if (!title || !client) { alert('El nombre del proyecto y el cliente son obligatorios.'); return; }
   const sd = document.getElementById('m_startdate').value;
   if (sd) document.getElementById('startDate').value = sd;
@@ -1717,58 +1940,120 @@ function startManual() {
   };
   currentTemplate = document.getElementById('m_template').value || 'estandar';
   activities = buildActivities(W, currentTemplate);
-  document.getElementById('step1b').style.display = 'none';
-  document.getElementById('step2').style.display = 'block';
-  document.getElementById('previewTitle').textContent = projectData.title;
-  document.getElementById('previewSub').textContent = projectData.subtitle || '';
-  document.getElementById('pCliente').textContent = projectData.client;
-  document.getElementById('pQuote').textContent = projectData.quote_number;
-  document.getElementById('pWeeks').textContent = W + ' sem.';
-  document.getElementById('totalWeeks').value = W;
-  const inlineW = document.getElementById('weeksEditInline'); if (inlineW) inlineW.value = W;
-  document.getElementById('projectInfoCard').style.display = 'block';
-  renderTable();
-  document.getElementById('splitPanel').style.display = 'block';
-  document.getElementById('generateBtnRow').style.display = 'flex';
-  setStatus('success', 'Timing manual generado con ' + activities.length + ' actividades. Ajusta los valores y genera el PDF.');
+  enterEditMode('Timing manual generado con ' + activities.length + ' actividades. Ajusta los valores y genera el PDF.');
 }
 
 // ── AUTOSAVE: persist work in localStorage ────────────────────────────────
+// ── BIBLIOTECA DE PROYECTOS ──────────────────────────────────────────────
+function getLibrary() {
+  try { return JSON.parse(localStorage.getItem('adv_timing_projects') || '{}'); }
+  catch(e) { return {}; }
+}
+function setLibrary(lib) {
+  try { localStorage.setItem('adv_timing_projects', JSON.stringify(lib)); } catch(e) {}
+}
+
 function saveWork() {
-  try {
-    localStorage.setItem('adv_timing_work', JSON.stringify({
-      projectData, activities,
-      startDate: document.getElementById('startDate').value,
-      ts: Date.now()
-    }));
-  } catch(e) {}
+  if (!projectData || !activities || !activities.length) return;
+  if (!projectData.id) projectData.id = 'p' + Date.now();
+  const lib = getLibrary();
+  lib[projectData.id] = {
+    projectData, activities,
+    startDate: document.getElementById('startDate').value,
+    ts: Date.now()
+  };
+  setLibrary(lib);
 }
 
-function restoreWork() {
-  try {
-    const saved = localStorage.getItem('adv_timing_work');
-    if (!saved) return false;
-    const data = JSON.parse(saved);
-    if (!data.activities || !data.activities.length) return false;
-    // Only restore if less than 7 days old
-    if (Date.now() - (data.ts||0) > 7*24*3600*1000) return false;
-    projectData = data.projectData || {};
-    activities = data.activities;
-    if (data.startDate) document.getElementById('startDate').value = data.startDate;
-    return true;
-  } catch(e) { return false; }
+let pendingDeleteId = null;
+
+function deleteProject(id, btn) {
+  // Confirmación inline de dos clics (sin depender de confirm(), que algunos
+  // navegadores bloquean)
+  if (pendingDeleteId !== id) {
+    pendingDeleteId = id;
+    if (btn) {
+      btn.textContent = '¿Eliminar?';
+      btn.style.cssText += ';background:#FCEBEB;color:#993C1D;font-size:11px;font-weight:700;border-radius:4px;padding:3px 8px';
+    }
+    // Cancela la confirmación tras 3 segundos sin segundo clic
+    setTimeout(() => {
+      if (pendingDeleteId === id) { pendingDeleteId = null; renderLibrary(); }
+    }, 3000);
+    return;
+  }
+  // Segundo clic: eliminar de verdad
+  pendingDeleteId = null;
+  const lib = getLibrary();
+  // Borra por key directa y también por coincidencia de projectData.id (robusto
+  // ante cualquier desalineación key/id)
+  delete lib[id];
+  Object.keys(lib).forEach(k => {
+    if (lib[k] && lib[k].projectData && lib[k].projectData.id === id) delete lib[k];
+  });
+  setLibrary(lib);
+  // Si el proyecto borrado es el que está en memoria, limpiarlo para que un
+  // autoguardado pendiente no lo resucite
+  if (projectData && projectData.id === id) { projectData = {}; activities = []; }
+  renderLibrary();
 }
 
-function clearWork() {
-  try { localStorage.removeItem('adv_timing_work'); } catch(e) {}
+function duplicateProject(id) {
+  const lib = getLibrary();
+  const src = lib[id];
+  if (!src) return;
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.projectData.id = 'p' + Date.now();
+  copy.projectData.title = (copy.projectData.title||'Proyecto') + ' (copia)';
+  copy.projectData.baseline = null; // copies start fresh without baseline
+  copy.ts = Date.now();
+  lib[copy.projectData.id] = copy;
+  setLibrary(lib);
+  renderLibrary();
 }
 
-function resumeWork() {
-  if (!restoreWork()) return;
+function openProject(id) {
+  const lib = getLibrary();
+  const data = lib[id];
+  if (!data) return;
+  projectData = data.projectData || {};
+  activities = data.activities || [];
+  if (data.startDate) document.getElementById('startDate').value = data.startDate;
+  enterEditMode('Proyecto abierto desde la biblioteca.');
+}
+
+function renderLibrary() {
+  const wrap = document.getElementById('libraryList');
+  const card = document.getElementById('libraryCard');
+  if (!wrap || !card) return;
+  const lib = getLibrary();
+  const entries = Object.values(lib).sort((a,b) => (b.ts||0)-(a.ts||0));
+  if (!entries.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  wrap.innerHTML = entries.map(e => {
+    const p = e.projectData||{};
+    const dt = e.ts ? new Date(e.ts).toLocaleDateString('es-MX',{day:'numeric',month:'short'}) + ' ' + new Date(e.ts).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) : '';
+    const base = p.baseline ? ' · <span style="color:var(--teal)">📌 con línea base</span>' : '';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:0.5px solid var(--border)">
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="openProject('${p.id}')">
+        <div style="font-size:13px;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(p.title||'Sin título')}</div>
+        <div style="font-size:11px;color:var(--txt3)">${escHtml(p.client||'')} · ${escHtml(p.quote_number||'')} · ${dt}${base}</div>
+      </div>
+      <button class="btn-secondary" style="padding:5px 12px;font-size:12px" onclick="openProject('${p.id}')">Abrir</button>
+      <button class="del-btn" onclick="event.stopPropagation();duplicateProject('${p.id}')" title="Duplicar" style="font-size:13px">⧉</button>
+      <button class="del-btn" onclick="event.stopPropagation();deleteProject('${p.id}', this)" title="Eliminar">×</button>
+    </div>`;
+  }).join('');
+}
+
+// Shared entry into edit mode (used by openProject, startManual, analyzeQuote result)
+function enterEditMode(msg) {
   const W = parseInt(projectData.weeks) || 12;
   document.getElementById('step1').style.display = 'none';
+  document.getElementById('step1b').style.display = 'none';
+  document.getElementById('step3').style.display = 'none';
   document.getElementById('step2').style.display = 'block';
-  document.getElementById('previewTitle').textContent = projectData.title || 'Proyecto restaurado';
+  document.getElementById('previewTitle').textContent = projectData.title || '';
   document.getElementById('previewSub').textContent = projectData.subtitle || '';
   document.getElementById('pCliente').textContent = projectData.client || '—';
   document.getElementById('pQuote').textContent = projectData.quote_number || '—';
@@ -1776,11 +2061,15 @@ function resumeWork() {
   document.getElementById('totalWeeks').value = W;
   const iw = document.getElementById('weeksEditInline'); if (iw) iw.value = W;
   document.getElementById('projectInfoCard').style.display = 'block';
+  renderShutdowns();
   renderTable();
   document.getElementById('splitPanel').style.display = 'block';
   document.getElementById('generateBtnRow').style.display = 'flex';
-  setStatus('success', 'Trabajo anterior restaurado. Continúa donde lo dejaste.');
+  updateBaselineUI();
+  if (msg) setStatus('success', msg);
 }
+
+function clearWork() { /* library persists; nothing to clear on reset */ }
 
 function resetApp() {
   clearWork();
@@ -1797,6 +2086,7 @@ function resetApp() {
   document.getElementById('statusBar').style.display = 'none';
   document.getElementById('generateBtn').disabled = false;
   fileInput.value = '';
+  renderLibrary();
 }
 </script>
 </body>
